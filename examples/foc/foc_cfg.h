@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __EXAMPLES_FOC_FOC_CFG_H
-#define __EXAMPLES_FOC_FOC_CFG_H
+#ifndef __APPS_EXAMPLES_FOC_FOC_CFG_H
+#define __APPS_EXAMPLES_FOC_FOC_CFG_H
 
 /****************************************************************************
  * Included Files
@@ -56,6 +56,12 @@
 #  ifndef CONFIG_INDUSTRY_FOC_ANGLE_OPENLOOP
 #    error
 #  endif
+#endif
+
+/* For now only the FOC PI current controller supported */
+
+#ifndef CONFIG_EXAMPLES_FOC_CONTROL_PI
+#  error For now only the FOC PI current controller supported
 #endif
 
 /* Velocity ramp must be configured */
@@ -123,9 +129,65 @@
 #  if CONFIG_EXAMPLES_FOC_MOTOR_POLES == 0
 #    error
 #  endif
-#  if CONFIG_EXAMPLES_FOC_MOTOR_POSMAX == 0
+#  if CONFIG_EXAMPLES_FOC_QENCO_POSMAX == 0
 #    error
 #  endif
 #endif
 
-#endif /* __EXAMPLES_FOC_FOC_CFG_H */
+/* Setpoint source must be specified */
+
+#if !defined(CONFIG_EXAMPLES_FOC_SETPOINT_CONST) &&  \
+    !defined(CONFIG_EXAMPLES_FOC_SETPOINT_ADC) && \
+    !defined(CONFIG_EXAMPLES_FOC_SETPOINT_CHAR)
+#  error
+#endif
+
+/* Setpoint ADC scale factor */
+
+#ifdef CONFIG_EXAMPLES_FOC_SETPOINT_ADC
+#  define SETPOINT_ADC_SCALE (1.0f / CONFIG_EXAMPLES_FOC_ADC_MAX)
+#endif
+
+/* If constant setpoint is selected, setpoint value must be provided */
+
+#ifdef CONFIG_EXAMPLES_FOC_SETPOINT_CONST
+#  define SETPOINT_ADC_SCALE   (1)
+#  if CONFIG_EXAMPLES_FOC_SETPOINT_CONST_VALUE == 0
+#    error
+#  endif
+#endif
+
+/* CHARCTRL setpoint control */
+
+#ifdef CONFIG_EXAMPLES_FOC_SETPOINT_CHAR
+#  define SETPOINT_ADC_SCALE  (1 / 1000.0f)
+#endif
+
+/* VBUS source must be specified */
+
+#if !defined(CONFIG_EXAMPLES_FOC_VBUS_CONST) &&  \
+    !defined(CONFIG_EXAMPLES_FOC_VBUS_ADC)
+#  error
+#endif
+
+/* VBUS ADC scale factor */
+
+#ifdef CONFIG_EXAMPLES_FOC_VBUS_ADC
+#  define VBUS_ADC_SCALE (CONFIG_EXAMPLES_FOC_ADC_VREF *    \
+                          CONFIG_EXAMPLES_FOC_VBUS_SCALE /  \
+                          CONFIG_EXAMPLES_FOC_ADC_MAX /     \
+                          1000.0f /                         \
+                          1000.0f)
+#endif
+
+/* If constant VBUS is selected, VBUS value must be provided */
+
+#ifdef CONFIG_EXAMPLES_FOC_VBUS_CONST
+#  define VBUS_ADC_SCALE   (1)
+#  define VBUS_CONST_VALUE (CONFIG_EXAMPLES_FOC_VBUS_CONST_VALUE / 1000.0f)
+#  if CONFIG_EXAMPLES_FOC_VBUS_CONST_VALUE == 0
+#    error
+#  endif
+#endif
+
+#endif /* __APPS_EXAMPLES_FOC_FOC_CFG_H */

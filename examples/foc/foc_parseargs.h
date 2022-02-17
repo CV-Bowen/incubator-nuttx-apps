@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __EXAMPLES_FOC_FOC_PARSEARGS_H
-#define __EXAMPLES_FOC_FOC_PARSEARGS_H
+#ifndef __APPS_EXAMPLES_FOC_FOC_PARSEARGS_H
+#define __APPS_EXAMPLES_FOC_FOC_PARSEARGS_H
 
 /****************************************************************************
  * Included Files
@@ -47,8 +47,12 @@ struct args_s
 #ifdef CONFIG_EXAMPLES_FOC_HAVE_OPENLOOP
   int      qparam;              /* Open-loop Q setting (x1000) */
 #endif
-  uint32_t pi_kp;               /* PI Kp (x1000) */
-  uint32_t pi_ki;               /* PI Ki (x1000) */
+
+#ifdef CONFIG_EXAMPLES_FOC_CONTROL_PI
+  uint32_t foc_pi_kp;           /* FOC PI Kp (x1000) */
+  uint32_t foc_pi_ki;           /* FOC PI Ki (x1000) */
+#endif
+
   int      state;               /* Example state (FREE, CW, CCW, STOP) */
   int8_t   en;                  /* Enabled instances (bit-encoded) */
 #ifdef CONFIG_EXAMPLES_FOC_HAVE_TORQ
@@ -76,4 +80,4 @@ struct args_s
 
 void parse_args(FAR struct args_s *args, int argc, FAR char **argv);
 
-#endif /* __EXAMPLES_FOC_FOC_THR_H */
+#endif /* __APPS_EXAMPLES_FOC_FOC_THR_H */

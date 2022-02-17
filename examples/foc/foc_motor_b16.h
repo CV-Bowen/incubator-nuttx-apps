@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __EXAMPLES_FOC_FOC_MOTOR_B16_H
-#define __EXAMPLES_FOC_FOC_MOTOR_B16_H
+#ifndef __APPS_EXAMPLES_FOC_FOC_MOTOR_B16_H
+#define __APPS_EXAMPLES_FOC_FOC_MOTOR_B16_H
 
 /****************************************************************************
  * Included Files
@@ -80,6 +80,9 @@ struct foc_motor_b16_s
   foc_angle_b16_t               qenco;        /* Qenco angle handler */
 #endif
   int                           foc_mode;     /* FOC mode */
+#ifdef CONFIG_EXAMPLES_FOC_HAVE_RUN
+  int                           foc_mode_run; /* FOC mode for run state */
+#endif
   int                           ctrl_state;   /* Controller state */
   b16_t                         vbus;         /* Power bus voltage */
   b16_t                         angle_now;    /* Phase angle now */
@@ -130,4 +133,4 @@ int foc_motor_control(FAR struct foc_motor_b16_s *motor);
 int foc_motor_handle(FAR struct foc_motor_b16_s *motor,
                      FAR struct foc_mq_s *handle);
 
-#endif /* __EXAMPLES_FOC_FOC_MOTOR_B16_H */
+#endif /* __APPS_EXAMPLES_FOC_FOC_MOTOR_B16_H */

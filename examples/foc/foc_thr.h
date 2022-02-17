@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __EXAMPLES_FOC_FOC_THR_H
-#define __EXAMPLES_FOC_FOC_THR_H
+#ifndef __APPS_EXAMPLES_FOC_FOC_THR_H
+#define __APPS_EXAMPLES_FOC_FOC_THR_H
 
 /****************************************************************************
  * Included Files
@@ -27,9 +27,10 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/motor/foc/foc.h>
-
+#include <pthread.h>
 #include <mqueue.h>
+
+#include <nuttx/motor/foc/foc.h>
 
 #include "foc_device.h"
 
@@ -83,8 +84,10 @@ enum foc_controller_state_e
 #ifdef CONFIG_EXAMPLES_FOC_HAVE_ALIGN
   FOC_CTRL_STATE_ALIGN,
 #endif
+#ifdef CONFIG_EXAMPLES_FOC_HAVE_RUN
   FOC_CTRL_STATE_RUN_INIT,
   FOC_CTRL_STATE_RUN,
+#endif
   FOC_CTRL_STATE_IDLE
 };
 
@@ -101,8 +104,12 @@ struct foc_ctrl_env_s
 #ifdef CONFIG_EXAMPLES_FOC_HAVE_OPENLOOP
   int                 qparam;   /* Open-loop Q setting (x1000) */
 #endif
-  uint32_t            pi_kp;    /* FOC PI Kp (x1000) */
-  uint32_t            pi_ki;    /* FOC PI Ki (x1000) */
+
+#ifdef CONFIG_EXAMPLES_FOC_CONTROL_PI
+  uint32_t            foc_pi_kp; /* FOC PI Kp (x1000) */
+  uint32_t            foc_pi_ki; /* FOC PI Ki (x1000) */
+#endif
+
 #ifdef CONFIG_EXAMPLES_FOC_HAVE_TORQ
   uint32_t            torqmax;  /* Torque max (x1000) */
 #endif
@@ -122,12 +129,10 @@ struct foc_ctrl_env_s
  * Public Function Prototypes
  ****************************************************************************/
 
-#ifdef CONFIG_INDUSTRY_FOC_FLOAT
-int foc_float_thr(FAR struct foc_ctrl_env_s *envp);
-#endif
+int foc_threads_init(void);
+void foc_threads_deinit(void);
+bool foc_threads_terminated(void);
+int foc_ctrlthr_init(FAR struct foc_ctrl_env_s *foc, int i, FAR mqd_t *mqd,
+                     FAR pthread_t *thread);
 
-#ifdef CONFIG_INDUSTRY_FOC_FIXED16
-int foc_fixed16_thr(FAR struct foc_ctrl_env_s *envp);
-#endif
-
-#endif /* __EXAMPLES_FOC_FOC_THR_H */
+#endif /* __APPS_EXAMPLES_FOC_FOC_THR_H */
