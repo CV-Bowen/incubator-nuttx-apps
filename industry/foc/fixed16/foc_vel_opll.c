@@ -1,5 +1,5 @@
 /****************************************************************************
- * apps/industry/foc/float/foc_vel_opll.c
+ * apps/industry/foc/fixed16/foc_vel_opll.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -28,11 +28,11 @@
 #include <errno.h>
 #include <stdlib.h>
 
-#include <dsp.h>
+#include <dspb16.h>
 
 #include "industry/foc/foc_common.h"
 #include "industry/foc/foc_log.h"
-#include "industry/foc/float/foc_velocity.h"
+#include "industry/foc/fixed16/foc_velocity.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -44,42 +44,42 @@
 
 /* PLL observer private data */
 
-struct foc_pll_f32_s
+struct foc_pll_b16_s
 {
-  struct foc_vel_pll_f32_cfg_s     cfg;
-  struct motor_sobserver_pll_f32_s data;
-  struct motor_sobserver_f32_s     o;
-  float                            sensor_dir;
+  struct foc_vel_pll_b16_cfg_s     cfg;
+  struct motor_sobserver_pll_b16_s data;
+  struct motor_sobserver_b16_s     o;
+  b16_t                            sensor_dir;
 };
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
-static int foc_velocity_pll_init_f32(FAR foc_velocity_f32_t *h);
-static void foc_velocity_pll_deinit_f32(FAR foc_velocity_f32_t *h);
-static int foc_velocity_pll_cfg_f32(FAR foc_velocity_f32_t *h,
+static int foc_velocity_pll_init_b16(FAR foc_velocity_b16_t *h);
+static void foc_velocity_pll_deinit_b16(FAR foc_velocity_b16_t *h);
+static int foc_velocity_pll_cfg_b16(FAR foc_velocity_b16_t *h,
                                     FAR void *cfg);
-static int foc_velocity_pll_zero_f32(FAR foc_velocity_f32_t *h);
-static int foc_velocity_pll_dir_f32(FAR foc_velocity_f32_t *h, float dir);
-static int foc_velocity_pll_run_f32(FAR foc_velocity_f32_t *h,
-                                    FAR struct foc_velocity_in_f32_s *in,
-                                    FAR struct foc_velocity_out_f32_s *out);
+static int foc_velocity_pll_zero_b16(FAR foc_velocity_b16_t *h);
+static int foc_velocity_pll_dir_b16(FAR foc_velocity_b16_t *h, b16_t dir);
+static int foc_velocity_pll_run_b16(FAR foc_velocity_b16_t *h,
+                                    FAR struct foc_velocity_in_b16_s *in,
+                                    FAR struct foc_velocity_out_b16_s *out);
 
 /****************************************************************************
  * Public Data
  ****************************************************************************/
 
-/* FOC velocity float interface */
+/* FOC velocity b16_t interface */
 
-struct foc_velocity_ops_f32_s g_foc_velocity_opll_f32 =
+struct foc_velocity_ops_b16_s g_foc_velocity_opll_b16 =
 {
-  .init   = foc_velocity_pll_init_f32,
-  .deinit = foc_velocity_pll_deinit_f32,
-  .cfg    = foc_velocity_pll_cfg_f32,
-  .zero   = foc_velocity_pll_zero_f32,
-  .dir    = foc_velocity_pll_dir_f32,
-  .run    = foc_velocity_pll_run_f32,
+  .init   = foc_velocity_pll_init_b16,
+  .deinit = foc_velocity_pll_deinit_b16,
+  .cfg    = foc_velocity_pll_cfg_b16,
+  .zero   = foc_velocity_pll_zero_b16,
+  .dir    = foc_velocity_pll_dir_b16,
+  .run    = foc_velocity_pll_run_b16,
 };
 
 /****************************************************************************
@@ -87,17 +87,17 @@ struct foc_velocity_ops_f32_s g_foc_velocity_opll_f32 =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: foc_velocity_pll_init_f32
+ * Name: foc_velocity_pll_init_b16
  *
  * Description:
- *   Initialize the PLL velocity observer (float32)
+ *   Initialize the PLL velocity observer (fixed16)
  *
  * Input Parameter:
  *   h - pointer to FOC velocity handler
  *
  ****************************************************************************/
 
-static int foc_velocity_pll_init_f32(FAR foc_velocity_f32_t *h)
+static int foc_velocity_pll_init_b16(FAR foc_velocity_b16_t *h)
 {
   int ret = OK;
 
@@ -105,7 +105,7 @@ static int foc_velocity_pll_init_f32(FAR foc_velocity_f32_t *h)
 
   /* Connect velocity data */
 
-  h->data = zalloc(sizeof(struct foc_pll_f32_s));
+  h->data = zalloc(sizeof(struct foc_pll_b16_s));
   if (h->data == NULL)
     {
       ret = -ENOMEM;
@@ -117,17 +117,17 @@ errout:
 }
 
 /****************************************************************************
- * Name: foc_velocity_pll_deinit_f32
+ * Name: foc_velocity_pll_deinit_b16
  *
  * Description:
- *   De-initialize the PLL velocity observer (float32)
+ *   De-initialize the PLL velocity observer (fixed16)
  *
  * Input Parameter:
  *   h - pointer to FOC velocity handler
  *
  ****************************************************************************/
 
-static void foc_velocity_pll_deinit_f32(FAR foc_velocity_f32_t *h)
+static void foc_velocity_pll_deinit_b16(FAR foc_velocity_b16_t *h)
 {
   DEBUGASSERT(h);
 
@@ -140,21 +140,21 @@ static void foc_velocity_pll_deinit_f32(FAR foc_velocity_f32_t *h)
 }
 
 /****************************************************************************
- * Name: foc_velocity_pll_cfg_f32
+ * Name: foc_velocity_pll_cfg_b16
  *
  * Description:
- *   Configure the PLL velocity observer (float32)
+ *   Configure the PLL velocity observer (fixed16)
  *
  * Input Parameter:
  *   h   - pointer to FOC velocity handler
  *   cfg - pointer to velocity handler configuration data
- *         (struct foc_pll_f32_s)
+ *         (struct foc_pll_b16_s)
  *
  ****************************************************************************/
 
-static int foc_velocity_pll_cfg_f32(FAR foc_velocity_f32_t *h, FAR void *cfg)
+static int foc_velocity_pll_cfg_b16(FAR foc_velocity_b16_t *h, FAR void *cfg)
 {
-  FAR struct foc_pll_f32_s *pll = NULL;
+  FAR struct foc_pll_b16_s *pll = NULL;
   int                       ret = OK;
 
   DEBUGASSERT(h);
@@ -166,37 +166,37 @@ static int foc_velocity_pll_cfg_f32(FAR foc_velocity_f32_t *h, FAR void *cfg)
 
   /* Copy configuration */
 
-  memcpy(&pll->cfg, cfg, sizeof(struct foc_vel_pll_f32_cfg_s));
+  memcpy(&pll->cfg, cfg, sizeof(struct foc_vel_pll_b16_cfg_s));
 
   /* Configure observer */
 
-  motor_sobserver_pll_init(&pll->data,
-                           pll->cfg.kp,
-                           pll->cfg.ki);
+  motor_sobserver_pll_init_b16(&pll->data,
+                               pll->cfg.kp,
+                               pll->cfg.ki);
 
-  motor_sobserver_init(&pll->o, &pll->data, pll->cfg.per);
+  motor_sobserver_init_b16(&pll->o, &pll->data, pll->cfg.per);
 
   /* Initialize with CW direction */
 
-  pll->sensor_dir = DIR_CW;
+  pll->sensor_dir = DIR_CW_B16;
 
   return ret;
 }
 
 /****************************************************************************
- * Name: foc_velocity_pll_zero_f32
+ * Name: foc_velocity_pll_zero_b16
  *
  * Description:
- *   Zero the DIV velocity observer (float32)
+ *   Zero the DIV velocity observer (fixed16)
  *
  * Input Parameter:
  *   h   - pointer to FOC velocity handler
  *
  ****************************************************************************/
 
-static int foc_velocity_pll_zero_f32(FAR foc_velocity_f32_t *h)
+static int foc_velocity_pll_zero_b16(FAR foc_velocity_b16_t *h)
 {
-  FAR struct foc_pll_f32_s *pll = NULL;
+  FAR struct foc_pll_b16_s *pll = NULL;
   int                       ret = OK;
 
   DEBUGASSERT(h);
@@ -208,18 +208,18 @@ static int foc_velocity_pll_zero_f32(FAR foc_velocity_f32_t *h)
 
   /* Reinitialize observer */
 
-  motor_sobserver_pll_init(&pll->data,
-                           pll->cfg.kp,
-                           pll->cfg.ki);
+  motor_sobserver_pll_init_b16(&pll->data,
+                               pll->cfg.kp,
+                               pll->cfg.ki);
 
   return ret;
 }
 
 /****************************************************************************
- * Name: foc_velocity_pll_dir_f32
+ * Name: foc_velocity_pll_dir_b16
  *
  * Description:
- *   Set the PLL velocity observer direction (float32)
+ *   Set the PLL velocity observer direction (fixed16)
  *
  * Input Parameter:
  *   h   - pointer to FOC velocity handler
@@ -227,9 +227,9 @@ static int foc_velocity_pll_zero_f32(FAR foc_velocity_f32_t *h)
  *
  ****************************************************************************/
 
-static int foc_velocity_pll_dir_f32(FAR foc_velocity_f32_t *h, float dir)
+static int foc_velocity_pll_dir_b16(FAR foc_velocity_b16_t *h, b16_t dir)
 {
-  FAR struct foc_pll_f32_s *pll = NULL;
+  FAR struct foc_pll_b16_s *pll = NULL;
 
   DEBUGASSERT(h);
 
@@ -246,10 +246,10 @@ static int foc_velocity_pll_dir_f32(FAR foc_velocity_f32_t *h, float dir)
 }
 
 /****************************************************************************
- * Name: foc_velocity_pll_run_f32
+ * Name: foc_velocity_pll_run_b16
  *
  * Description:
- *   Process the PLL velocity observer (float32)
+ *   Process the PLL velocity observer (fixed16)
  *
  * Input Parameter:
  *   h   - pointer to FOC velocity handler
@@ -258,11 +258,11 @@ static int foc_velocity_pll_dir_f32(FAR foc_velocity_f32_t *h, float dir)
  *
  ****************************************************************************/
 
-static int foc_velocity_pll_run_f32(FAR foc_velocity_f32_t *h,
-                                    FAR struct foc_velocity_in_f32_s *in,
-                                    FAR struct foc_velocity_out_f32_s *out)
+static int foc_velocity_pll_run_b16(FAR foc_velocity_b16_t *h,
+                                    FAR struct foc_velocity_in_b16_s *in,
+                                    FAR struct foc_velocity_out_b16_s *out)
 {
-  FAR struct foc_pll_f32_s *pll = NULL;
+  FAR struct foc_pll_b16_s *pll = NULL;
 
   DEBUGASSERT(h);
 
@@ -273,11 +273,12 @@ static int foc_velocity_pll_run_f32(FAR foc_velocity_f32_t *h,
 
   /* Run observer */
 
-  motor_sobserver_pll(&pll->o, in->angle);
+  motor_sobserver_pll_b16(&pll->o, in->angle);
 
   /* Copy data */
 
-  out->velocity = pll->sensor_dir * motor_sobserver_speed_get(&pll->o);
+  out->velocity = b16mulb16(pll->sensor_dir,
+                            motor_sobserver_speed_get_b16(&pll->o));
 
   return OK;
 }

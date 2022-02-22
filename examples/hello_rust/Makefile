@@ -1,5 +1,5 @@
 ############################################################################
-# apps/mlearning/cmsis/Makefile
+# apps/examples/hello_rust/Make.defs
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -8,7 +8,7 @@
 # "License"); you may not use this file except in compliance with the
 # License.  You may obtain a copy of the License at
 #
-#  http://www.apache.org/licenses/LICENSE-2.0
+#   http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,16 +20,15 @@
 
 include $(APPDIR)/Make.defs
 
-cmsis.zip:
-	$(Q) curl -L https://github.com/ARM-software/CMSIS_5/archive/refs/tags/$(CONFIG_CMSIS_VER).zip -o cmsis.zip
-	$(Q) unzip -o cmsis.zip
-	$(Q) mv CMSIS_5-$(CONFIG_CMSIS_VER) CMSIS_5
-	$(Q) patch -p0 < cmsis-nn-support_nnabla.patch
+# Hello, Rust! built-in application info
 
-context:: cmsis.zip
+PROGNAME  = $(CONFIG_EXAMPLES_HELLO_RUST_PROGNAME)
+PRIORITY  = $(CONFIG_EXAMPLES_HELLO_RUST_PRIORITY)
+STACKSIZE = $(CONFIG_EXAMPLES_HELLO_RUST_STACKSIZE)
+MODULE    = $(CONFIG_EXAMPLES_HELLO_RUST)
 
-distclean::
-	$(call DELDIR, CMSIS_5)
-	$(call DELFILE, cmsis.zip)
+# Hello, Rust! Example
+
+MAINSRC = hello_rust_main.rs
 
 include $(APPDIR)/Application.mk
