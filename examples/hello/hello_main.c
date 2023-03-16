@@ -23,7 +23,12 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
+#include <sys/ioctl.h>
 #include <stdio.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <debug.h>
 
 /****************************************************************************
  * Public Functions
@@ -35,6 +40,73 @@
 
 int main(int argc, FAR char *argv[])
 {
+  int fd;
+  ssize_t ret = 0;
+  ssize_t ret1;
+  char buf[10];
+
+  if (argc != 2)
+    {
+      printf("Need 2 Arguments\n");
+      return ERROR;
+    }
+
+  fd = open("/dev/virt_serial0", O_RDWR);
+  if (fd < 0)
+    {
+      printf("Open failed, err=%d\n", errno);
+      return ERROR;
+    }
+
+  if (*argv[1] == 'r')
+    {
+      printf("Receive test\n");
+      while (1)
+        {
+          ret = read(fd, buf, 10);
+          if (ret < 0)
+            {
+              printf("Read fail, err=%d\n", errno);
+              break;
+            }
+
+          lib_dumpbuffer("Read data:", (const uint8_t *)buf, ret);
+        }
+    }
+  else if (*argv[1] == 't')
+    {
+      printf("Transimit test\n");
+      ret = write(fd, "123456789", 10);
+      if (ret < 0)
+        {
+          printf("Write failed, err=%d\n", errno);
+        }
+    }
+  else if (*argv[1] == 'e')
+    {
+      printf("Echo test\n");
+      while (1)
+        {
+          ret = read(fd, buf, 10);
+          if (ret <= 0)
+            {
+              printf("Read failed, err=%d\n", errno);
+              break;
+            }
+
+          lib_dumpbuffer("Read data:", (const uint8_t *)buf, ret);
+
+          ret1 = write(fd, buf, ret);
+          if (ret1 != ret)
+            {
+              ret = ret1;
+              printf("Write failed, ret1=%ld, err=%d\n", ret1, errno);
+              break;
+            }
+        }
+    }
+
+  close(fd);
   printf("Hello, World!!\n");
-  return 0;
+  return ret;
 }
