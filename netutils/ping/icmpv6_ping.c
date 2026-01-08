@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/ping/icmpv6_ping.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -216,6 +218,20 @@ void icmp6_ping(FAR const struct ping6_info_s *info)
       return;
     }
 
+#ifdef CONFIG_NET_BINDTODEVICE
+  if (info->devname)
+    {
+      ret = setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE,
+                       info->devname, strlen(info->devname));
+      if (ret < 0)
+        {
+          icmp6_callback(&result, ICMPV6_E_BINDDEV, errno);
+          free(iobuffer);
+          return;
+        }
+    }
+#endif
+
   kickoff = clock();
 
   memset(&destaddr, 0, sizeof(struct sockaddr_in6));
@@ -314,14 +330,23 @@ void icmp6_ping(FAR const struct ping6_info_s *info)
 
           if (inhdr->type == ICMPv6_ECHO_REPLY)
             {
+#ifndef CONFIG_SIM_NETUSRSOCK
               if (ntohs(inhdr->id) != result.id)
                 {
                   icmp6_callback(&result, ICMPv6_W_IDDIFF, ntohs(inhdr->id));
                   retry = true;
                 }
-              else if (ntohs(inhdr->seqno) > result.seqno)
+              else
+#endif
+              if (ntohs(inhdr->seqno) > result.seqno)
                 {
                   icmp6_callback(&result, ICMPv6_W_SEQNOBIG,
+                                 ntohs(inhdr->seqno));
+                  retry = true;
+                }
+              else if (ntohs(inhdr->seqno) < result.seqno)
+                {
+                  icmp6_callback(&result, ICMPv6_W_SEQNOSMALL,
                                  ntohs(inhdr->seqno));
                   retry = true;
                 }
@@ -329,14 +354,6 @@ void icmp6_ping(FAR const struct ping6_info_s *info)
                 {
                   bool verified = true;
                   long pktdelay = elapsed;
-
-                  if (ntohs(inhdr->seqno) < result.seqno)
-                    {
-                      icmp6_callback(&result, ICMPv6_W_SEQNOSMALL,
-                                     ntohs(inhdr->seqno));
-                      pktdelay += info->delay * USEC_PER_MSEC;
-                      retry     = true;
-                    }
 
                   icmp6_callback(&result, ICMPv6_I_ROUNDTRIP, pktdelay);
 

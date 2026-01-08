@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/graphics/nxwidgets/src/cmultilinetextbox.cxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -1225,7 +1227,7 @@ void CMultiLineTextBox::drawCursor(CGraphicsPort *port)
       // Draw cursor
 
       port->invert(cursorX, cursorY,
-                   m_text->getFont()->getCharWidth( getCursorChar()),
+                   m_text->getFont()->getCharWidth(getCursorChar()),
                    m_text->getFont()->getHeight());
     }
 }

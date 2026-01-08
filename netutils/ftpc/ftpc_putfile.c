@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/ftpc/ftpc_putfile.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -26,6 +28,7 @@
 
 #include <sys/stat.h>
 #include <sys/sendfile.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -263,7 +266,7 @@ static int ftpc_sendfile(struct ftpc_session_s *session, const char *path,
 
   if (session->offset > 0)
     {
-      ret = ftpc_cmd(session, "REST %ld", session->offset);
+      ret = ftpc_cmd(session, "REST %" PRIdOFF, session->offset);
       session->size = session->offset;
     }
 

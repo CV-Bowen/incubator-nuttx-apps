@@ -1,6 +1,8 @@
 ############################################################################
 # apps/netutils/telnetd/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -22,8 +24,6 @@ include $(APPDIR)/Make.defs
 
 # Telnet daemon
 
-ifeq ($(CONFIG_NET_TCP),y)
 CSRCS = telnetd_daemon.c
-endif
 
 include $(APPDIR)/Application.mk

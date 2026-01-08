@@ -1,6 +1,8 @@
 ############################################################################
 # apps/examples/hidkbd/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -20,14 +22,14 @@
 
 include $(APPDIR)/Make.defs
 
-# USB Host HID keyboard Example
+# USB Host HID keyboard built-in application info
 
 PROGNAME = $(CONFIG_EXAMPLES_HIDKBD_PROGNAME)
 PRIORITY = $(CONFIG_EXAMPLES_HIDKBD_DEFPRIO)
 STACKSIZE = $(CONFIG_EXAMPLES_HIDKBD_STACKSIZE)
 MODULE = $(CONFIG_EXAMPLES_HIDKBD)
 
-# Hello, World! Example
+# USB Host HID keyboard example
 
 MAINSRC = hidkbd_main.c
 

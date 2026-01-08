@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/graphics/nxwidgets/UnitTests/CGlyphButton/cglyphbuttontest.hxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -31,6 +33,7 @@
 #include <cstdio>
 #include <semaphore.h>
 #include <debug.h>
+#include <sys/param.h>
 
 #include <nuttx/nx/nx.h>
 
@@ -59,12 +62,6 @@
 
 #ifndef CONFIG_CGLYPHBUTTONTEST_FONTCOLOR
 #  define CONFIG_CGLYPHBUTTONTEST_FONTCOLOR CONFIG_NXWIDGETS_DEFAULT_FONTCOLOR
-#endif
-
-// Helper macros
-
-#ifndef MAX
-#  define MAX(a,b) ((a) > (b) ? (a) : (b))
 #endif
 
 /////////////////////////////////////////////////////////////////////////////

@@ -1,7 +1,8 @@
 /****************************************************************************
  * apps/interpreters/bas/bas_error.h
  *
- *   Copyright (c) 1999-2014 Michael Haardt
+ * SPDX-License-Identifier: MIT
+ * SPDX-FileCopyrightText: 1999-2014 Michael Haardt
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -83,7 +84,7 @@
 #define STRAYELSE2         STATIC+46, _("`else' without `end if'")
 #define STRAYENDIF         STATIC+47, _("`end if' without multiline `if' or `else'")
 #define STRAYSUBEND        STATIC+49, _("`subend', `end sub' or `endproc' without `sub' or `def proc' inside %s")
-#define STRAYSUBEXIT       STATIC+50, _("`subexit' without `sub' inside %s")
+#define STRAYSUBEXIT       STATIC+50, _("`subexit' without `sub' inside")
 #define STRAYENDSELECT     STATIC+51, _("`end select' without `select case'")
 #define STRAYENDFN         STATIC+52, _("`end function' without `def fn' or `function'")
 #define STRAYENDEQ         STATIC+53, _("`=' returning from function without `def fn'")

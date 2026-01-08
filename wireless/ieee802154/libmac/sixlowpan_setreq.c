@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/wireless/ieee802154/libmac/sixlowpan_setreq.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -45,7 +47,7 @@ int sixlowpan_set_req(int sock, FAR const char *ifname,
   struct ieee802154_netmac_s arg;
   int ret;
 
-  strncpy(arg.ifr_name, ifname, IFNAMSIZ);
+  strlcpy(arg.ifr_name, ifname, IFNAMSIZ);
   memcpy(&arg.u.setreq, req, sizeof(struct ieee802154_set_req_s));
 
   ret = ioctl(sock, MAC802154IOC_MLME_SET_REQUEST,

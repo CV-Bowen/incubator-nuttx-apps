@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/tcpecho/tcpecho_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -40,12 +42,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <nuttx/net/arp.h>
 #include "netutils/netlib.h"
-
-#ifdef CONFIG_EXAMPLES_TCPECHO_DHCPC
-#  include <arpa/inet.h>
-#endif
 
 /* Here we include the header file for the application(s) we use in
  * our project as defined in the config/<board-name>/defconfig file
@@ -79,7 +76,7 @@ static int tcpecho_server(void);
  * Private Functions
  ****************************************************************************/
 
-static int tcpecho_netsetup()
+static int tcpecho_netsetup(void)
 {
   /* If this task is excecutated as an NSH built-in function, then the
    * network has already been configured by NSH's start-up logic.
@@ -93,6 +90,8 @@ static int tcpecho_netsetup()
 #ifdef CONFIG_EXAMPLES_TCPECHO_DHCPC
   struct dhcpc_state ds;
   void *handle;
+  char inetaddr[INET_ADDRSTRLEN];
+  int ret;
 #endif
 
   /* Many embedded network interfaces must have a software assigned MAC */
@@ -168,13 +167,21 @@ static int tcpecho_netsetup()
       netlib_set_dripv4addr("eth0", &ds.default_router);
     }
 
-  if (ds.dnsaddr.s_addr != 0)
+  for (int i = 0; i < ds.num_dnsaddr; i++)
     {
-      netlib_set_ipv4dnsaddr(&ds.dnsaddr);
+      if (ds.dnsaddr[i].s_addr != 0)
+        {
+          ret = netlib_set_ipv4dnsaddr(&ds.dnsaddr[i]);
+          if (ret < 0)
+            {
+              nerr("ERROR: Set DNS server %d:%s address failed: %d\n",
+                   i, inet_ntoa(ds.dnsaddr[i]), ret);
+            }
+        }
     }
 
   dhcpc_close(handle);
-  printf("IP: %s\n", inet_ntoa(ds.ipaddr));
+  printf("IP: %s\n", inet_ntoa_r(ds.ipaddr, inetaddr, sizeof(inetaddr)));
 
 #endif /* CONFIG_EXAMPLES_TCPECHO_DHCPC */
 #endif /* CONFIG_NSH_NETINIT */
@@ -243,12 +250,16 @@ static int tcpecho_server(void)
 
       if (client[0].revents & POLLRDNORM)
         {
+          char inetaddr[INET_ADDRSTRLEN];
+
           /* new client connection */
 
           clilen = sizeof(cliaddr);
-          connfd = accept(listenfd, (struct sockaddr *)&cliaddr, &clilen);
+          connfd = accept4(listenfd, (struct sockaddr *)&cliaddr, &clilen,
+                           SOCK_CLOEXEC);
 
-          ninfo("new client: %s\n", inet_ntoa(cliaddr.sin_addr));
+          ninfo("new client: %s\n",
+                inet_ntoa_r(cliaddr.sin_addr, inetaddr, sizeof(inetaddr)));
 
           for (i = 1; i < CONFIG_EXAMPLES_TCPECHO_NCONN; i++)
             {

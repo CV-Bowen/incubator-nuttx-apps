@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/include/graphics/nxwidgets/cradiobutton.hxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -166,7 +168,7 @@ namespace NXWidgets
     CRadioButton(CWidgetControl *pWidgetControl,
                  nxgl_coord_t x, nxgl_coord_t y,
                  nxgl_coord_t width, nxgl_coord_t height,
-                 CWidgetStyle *style = (CWidgetStyle *)NULL);
+                 CWidgetStyle *style = NULL);
 
     /**
      * Get the current state of the radio button.

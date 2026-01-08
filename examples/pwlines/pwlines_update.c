@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/pwlines/pwlines_update.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -27,6 +29,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/param.h>
 #include <inttypes.h>
 #include <unistd.h>
 #include <string.h>
@@ -50,10 +53,6 @@
 #  define CLEAR_WIDTH (CONFIG_EXAMPLES_PWLINES_LINEWIDTH + 2)
 #else
 #  define CLEAR_WIDTH CONFIG_EXAMPLES_PWLINES_LINEWIDTH
-#endif
-
-#ifndef MIN
-#  define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
 /****************************************************************************

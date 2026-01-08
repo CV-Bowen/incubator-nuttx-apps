@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/nxdemo/nxdemo.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -61,7 +63,7 @@
 #    define CONFIG_EXAMPLES_NXDEMO_BGCOLOR 0x00
 #  else
 #    define CONFIG_EXAMPLES_NXDEMO_BGCOLOR ' '
-# endif
+#  endif
 #endif
 
 #ifndef CONFIG_EXAMPLES_NXDEMO_DRAWCOLOR
@@ -98,9 +100,6 @@
 #endif
 #ifndef CONFIG_EXAMPLES_NXDEMO_SERVERPRIO
 #  define CONFIG_EXAMPLES_NXDEMO_SERVERPRIO 120
-#endif
-#ifndef CONFIG_EXAMPLES_NXDEMO_NOTIFYSIGNO
-#  define CONFIG_EXAMPLES_NXDEMO_NOTIFYSIGNO 4
 #endif
 
 /* Image Information ********************************************************/

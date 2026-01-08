@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/usrsocktest/usrsocktest_block_recv.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,6 +33,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #include "defines.h"
 
@@ -194,7 +197,7 @@ static void no_block_connect(FAR struct usrsocktest_daemon_conf_s *dconf)
 
   dconf->endpoint_addr = "127.0.0.1";
   dconf->endpoint_port = 255;
-  dconf->endpoint_block_connect = true;
+  dconf->endpoint_block_connect = false;
   dconf->endpoint_block_send = true;
   dconf->endpoint_recv_avail_from_start = true;
   dconf->endpoint_recv_avail = 6;
@@ -248,7 +251,8 @@ static void no_block_connect(FAR struct usrsocktest_daemon_conf_s *dconf)
   TEST_ASSERT_EQUAL(1, ret);
   TEST_ASSERT_EQUAL_UINT8_ARRAY("a", data, 1);
   TEST_ASSERT_EQUAL(sizeof(remoteaddr), addrlen);
-  TEST_ASSERT_EQUAL_UINT8_ARRAY(&remoteaddr, &addr, addrlen);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(&remoteaddr, &addr,
+                                addrlen - sizeof(addr.sin_zero));
   TEST_ASSERT_EQUAL(1, usrsocktest_daemon_get_num_connected_sockets());
   TEST_ASSERT_EQUAL(1, usrsocktest_daemon_get_num_active_sockets());
   TEST_ASSERT_EQUAL(6, usrsocktest_daemon_get_recv_bytes());
@@ -265,7 +269,8 @@ static void no_block_connect(FAR struct usrsocktest_daemon_conf_s *dconf)
   TEST_ASSERT_EQUAL(5, ret);
   TEST_ASSERT_EQUAL_UINT8_ARRAY("abcde", data, 5);
   TEST_ASSERT_EQUAL(sizeof(remoteaddr), addrlen);
-  TEST_ASSERT_EQUAL_UINT8_ARRAY(&remoteaddr, &addr, addrlen);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(&remoteaddr, &addr,
+                                addrlen - sizeof(addr.sin_zero));
   TEST_ASSERT_EQUAL(1, usrsocktest_daemon_get_num_connected_sockets());
   TEST_ASSERT_EQUAL(1, usrsocktest_daemon_get_num_active_sockets());
   TEST_ASSERT_EQUAL(11, usrsocktest_daemon_get_recv_bytes());
@@ -354,8 +359,7 @@ static void receive_timeout(FAR struct usrsocktest_daemon_conf_s *dconf)
 
   tv.tv_sec = 0;
   tv.tv_usec = 100 * 1000;
-  ret = setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, (FAR const void *)&tv,
-                   sizeof(tv));
+  ret = setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
   TEST_ASSERT_EQUAL(0, ret);
 
   /* Receive data from remote */
@@ -556,18 +560,18 @@ TEST_SETUP(block_recv)
 
 TEST_TEAR_DOWN(block_recv)
 {
-  int ret;
+  int unused_data ret;
 
   if (sd >= 0)
     {
       ret = close(sd);
-      assert(ret >= 0);
+      TEST_ASSERT_TRUE(ret >= 0);
     }
 
   if (started)
     {
       ret = usrsocktest_daemon_stop();
-      assert(ret == OK);
+      TEST_ASSERT_EQUAL(ret, OK);
     }
 }
 

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/netlib/netlib_setdripv4addr.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -76,8 +78,9 @@ int netlib_set_dripv4addr(FAR const char *ifname,
   memset(&netmask, 0, sizeof(netmask));
   netmask.sin_family  = AF_INET;
 
-  router.sin_addr    = *addr;
+  memset(&router, 0, sizeof(router));
   router.sin_family  = AF_INET;
+  router.sin_addr    = *addr;
 #endif
 
   if (ifname && addr)
@@ -108,16 +111,12 @@ int netlib_set_dripv4addr(FAR const char *ifname,
 
               /* This call fails if no default route exists, but it's OK */
 
-              delroute(sockfd,
-                       (FAR struct sockaddr_storage *)&target,
-                       (FAR struct sockaddr_storage *)&netmask);
+              delroute(sockfd, &target, &netmask, sizeof(target));
 
               /* Then add the new default route */
 
-              ret = addroute(sockfd,
-                             (FAR struct sockaddr_storage *)&target,
-                             (FAR struct sockaddr_storage *)&netmask,
-                             (FAR struct sockaddr_storage *)&router);
+              ret = addroute(sockfd, &target, &netmask,
+                             &router, sizeof(router));
             }
 #endif
 

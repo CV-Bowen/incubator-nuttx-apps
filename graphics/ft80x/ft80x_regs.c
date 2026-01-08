@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/graphics/ft80x/ft80x_regs.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -43,7 +45,7 @@
 
 #define DLSWAP_DELAY_USEC   (10 * 1000)
 
-/* But timeout after 5 seconds ( 5 * 100 * 10 MS = 5 S) */
+/* But timeout after 5 seconds (5 * 100 * 10 MS = 5 S) */
 
 #define DLSWAP_TIMEOUT_CSEC (5 * 100)
 

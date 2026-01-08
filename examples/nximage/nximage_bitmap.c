@@ -1,6 +1,8 @@
 /********************************************************************************************
  * apps/examples/nximage/nximage_bitmap.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -3692,5 +3694,5 @@ void nximage_blitrow(FAR nxgl_mxpixel_t *run, FAR const void **state)
 
   /* Save the start of the next row and return success */
 
-  *state = (FAR const void *)pos;
+  *state = pos;
 }

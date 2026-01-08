@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/random/random_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,10 +32,12 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <debug.h>
+#include <unistd.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
 /* Configuration ************************************************************/
 
 #ifndef CONFIG_EXAMPLES_MAXSAMPLES
@@ -87,7 +91,9 @@ int main(int argc, FAR char *argv[])
       nsamples = CONFIG_EXAMPLES_MAXSAMPLES;
     }
 
-  /* fill buffer to make it super-clear as to what has and has not been written */
+  /* fill buffer to make it super-clear as to what has and has not been
+   * written
+   */
 
   memset(buffer, 0xcc, sizeof(buffer));
 
@@ -116,15 +122,15 @@ int main(int argc, FAR char *argv[])
 
   if (nread != nsamples * sizeof(uint32_t))
     {
-      fprintf(stderr, "ERROR: Read from /dev/random only produced %d bytes\n",
-              (int)nread);
+      fprintf(stderr, "ERROR: Read from /dev/random only produced %zd "
+              "bytes\n", nread);
       close(fd);
       exit(EXIT_FAILURE);
     }
 
   /* Dump the sample buffer */
 
-  lib_dumpbuffer("Random values", (FAR const uint8_t*)buffer, nread);
+  lib_dumpbuffer("Random values", (FAR const uint8_t *)buffer, nread);
   close(fd);
   return EXIT_SUCCESS;
 }

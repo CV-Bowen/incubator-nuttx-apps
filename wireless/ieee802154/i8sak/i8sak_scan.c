@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/wireless/ieee802154/i8sak/i8sak_scan.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -28,6 +30,7 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/ioctl.h>
 #include <nuttx/fs/ioctl.h>
 
@@ -197,7 +200,7 @@ static void scan_eventcb(FAR struct ieee802154_primitive_s *primitive,
   int i;
 
   printf("\n\ni8sak: Scan complete: %s\n",
-         IEEE802154_STATUS_STRING[scan->status]);
+         g_ieee802154_status_string[scan->status]);
 
   printf("Scan type: ");
 

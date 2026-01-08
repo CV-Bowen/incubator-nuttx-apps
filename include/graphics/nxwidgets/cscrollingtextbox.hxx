@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/include/graphics/nxwidgets/cscrollingtextbox.hxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -163,7 +165,7 @@ namespace NXWidgets
                       nxgl_coord_t width, nxgl_coord_t height,
                       const CNxString &text, uint32_t flags,
                       nxgl_coord_t maxRows = 0,
-                      CWidgetStyle *style = (CWidgetStyle *)NULL);
+                      CWidgetStyle *style = NULL);
 
     /**
      * Set the horizontal alignment of text within the textbox.

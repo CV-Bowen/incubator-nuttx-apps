@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/pwfb/pwfb_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -337,7 +339,7 @@ static bool pwfb_putc(FAR struct pwfb_state_s *st,
 
   /* Render the glyph into the window */
 
-  src = (FAR const void *)glyph->bitmap;
+  src = glyph->bitmap;
   ret =  nxtk_bitmapwindow(wndo->hwnd, &bounds, &src,
                            fpos, (unsigned int)glyph->stride);
   if (ret < 0)

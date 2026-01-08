@@ -1,5 +1,7 @@
 ############################################################################
-# apps/wireless/src/Make.defs
+# apps/wireless/wapi/src/Make.defs
+#
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -28,6 +30,6 @@ endif
 
 DEPPATH += --dep-path src
 VPATH += :src
-CFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/wireless/wapi/src}
+CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/wireless/wapi/src
 
 endif

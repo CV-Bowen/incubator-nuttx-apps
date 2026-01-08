@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/system/zmodem/host/debug.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -33,11 +35,11 @@
  ****************************************************************************/
 
 #ifdef CONFIG_HAVE_FUNCTIONNAME
-# define EXTRA_FMT "%s: "
-# define EXTRA_ARG ,__FUNCTION__
+#  define EXTRA_FMT "%s: "
+#  define EXTRA_ARG ,__FUNCTION__
 #else
-# define EXTRA_FMT
-# define EXTRA_ARG
+#  define EXTRA_FMT
+#  define EXTRA_ARG
 #endif
 
 /****************************************************************************

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/mount/mount_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -178,7 +180,7 @@ static void show_statfs(const char *path)
     }
 }
 #else
-# define show_statfs(p)
+#  define show_statfs(p)
 #endif
 
 /****************************************************************************
@@ -212,7 +214,8 @@ static void show_directories(const char *path, int indent)
         {
           char *subdir;
           printf("%s/\n", direntry->d_name);
-          sprintf(g_namebuffer, "%s/%s", path, direntry->d_name);
+          snprintf(g_namebuffer, sizeof(g_namebuffer),
+                   "%s/%s", path, direntry->d_name);
           subdir = strdup(g_namebuffer);
           show_directories(subdir, indent + 1);
           free(subdir);
@@ -226,7 +229,7 @@ static void show_directories(const char *path, int indent)
   closedir(dirp);
 }
 #else
-# define show_directories(p,i)
+#  define show_directories(p,i)
 #endif
 
 /****************************************************************************
@@ -557,7 +560,7 @@ static void fail_stat(const char *path, int expectederror)
     }
 }
 #else
-# define fail_stat(p,e);
+#  define fail_stat(p,e);
 #endif
 
 /****************************************************************************
@@ -599,7 +602,7 @@ static void succeed_stat(const char *path)
 
 int main(int argc, FAR char *argv[])
 {
-  int  ret;
+  int ret;
 
 #ifndef CONFIG_EXAMPLES_MOUNT_DEVNAME
   /* Create a RAM disk for the test */

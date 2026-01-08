@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/netlib/netlib_getmacaddr.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -68,7 +70,7 @@ int netlib_getmacaddr(const char *ifname, uint8_t *macaddr)
       if (sockfd >= 0)
         {
           struct ifreq req;
-          memset (&req, 0, sizeof(struct ifreq));
+          memset(&req, 0, sizeof(struct ifreq));
 
           /* Put the driver name into the request */
 

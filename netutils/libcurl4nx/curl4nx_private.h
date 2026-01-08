@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/libcurl4nx/curl4nx_private.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -131,7 +133,7 @@ struct curl4nx_s
   uint32_t                    flags;
   bool                        verbose;
   curl4nx_xferinfofunc_f      progressfunc; /* Called when data chunks are received */
-  FAR void *                  progressdata;
+  FAR void                    *progressdata;
 
   /* Request side */
 
@@ -145,21 +147,21 @@ struct curl4nx_s
   int                         max_redirs;
 
   curl4nx_iofunc_f            writefunc; /* Called when data has to be uploaded */
-  FAR void *                  writedata;
+  FAR void                    *writedata;
 
   /* Response side */
 
   int                         rxbufsize;
-  FAR char *                  rxbuf;
+  FAR char                    *rxbuf;
 
   int                         status;
   unsigned long long          content_length;
 
   curl4nx_iofunc_f            readfunc; /* Called when data has to be downloaded */
-  FAR void *                  readdata;
+  FAR void                    *readdata;
 
   curl4nx_iofunc_f            headerfunc; /* Called when a complete HTTP header has been received */
-  FAR void *                  headerdata;
+  FAR void                    *headerdata;
 };
 
 /****************************************************************************

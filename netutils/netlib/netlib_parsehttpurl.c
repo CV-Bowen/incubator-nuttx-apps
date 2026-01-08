@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/netlib/netlib_parsehttpurl.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -51,7 +53,7 @@ int netlib_parsehttpurl(FAR const char *url, FAR uint16_t *port,
 {
   FAR const char *src = url;
   FAR char *dest;
-  int bytesleft;
+  size_t bytesleft;
   int ret = OK;
   size_t pathlen;
 

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/nximage/nximage_bkgd.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -300,7 +302,7 @@ void nximage_image(NXWINDOW hwnd)
       dest.pt1.y = pos.y;
       dest.pt2.y = pos.y;
 
-      src[0] = (FAR const void *)g_runs[0].run;
+      src[0] = g_runs[0].run;
 #if CONFIG_NX_NPLANES > 1
 # warning "More logic is needed for the case where CONFIG_NX_PLANES > 1"
 #endif
@@ -342,7 +344,7 @@ void nximage_image(NXWINDOW hwnd)
       dest.pt1.y = pos.y;
       dest.pt2.y = pos.y;
 
-      src[0] = (FAR const void *)g_runs[0].run;
+      src[0] = g_runs[0].run;
 #if CONFIG_NX_NPLANES > 1
 # warning "More logic is needed for the case where CONFIG_NX_PLANES > 1"
 #endif
@@ -363,7 +365,7 @@ void nximage_image(NXWINDOW hwnd)
       dest.pt1.y = pos.y;
       dest.pt2.y = pos.y;
 
-      src[0] = (FAR const void *)g_runs[1].run;
+      src[0] = g_runs[1].run;
 #if CONFIG_NX_NPLANES > 1
 # warning "More logic is needed for the case where CONFIG_NX_PLANES > 1"
 #endif

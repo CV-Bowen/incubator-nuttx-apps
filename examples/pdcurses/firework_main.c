@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/pdcurses/firework_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -161,7 +163,7 @@ int main(int argc, FAR char *argv[])
       init_pair(i, color_table[i], COLOR_BLACK);
     }
 
-  seed = time((time_t *) 0);
+  seed = time(NULL);
   srand(seed);
   flag = 0;
 

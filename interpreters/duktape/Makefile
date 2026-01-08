@@ -1,6 +1,8 @@
 ############################################################################
 # apps/interpreters/duktape/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -47,6 +49,7 @@ CFLAGS += -I$(DUKTAPE_UNPACK)/extras/console
 CFLAGS += -I$(DUKTAPE_UNPACK)/extras/print-alert
 CFLAGS += -DDUK_CMDLINE_CONSOLE_SUPPORT
 CFLAGS += -DDUK_CMDLINE_PRINTALERT_SUPPORT
+CFLAGS += -Wno-unused-but-set-variable
 
 $(DUKTAPE_TARBALL):
 	$(Q) echo "Downloading $(DUKTAPE_TARBALL)"
@@ -62,10 +65,13 @@ $(DUKTAPE_UNPACK): $(DUKTAPE_TARBALL)
 $(DUKTAPE_UNPACK)/.patch: $(DUKTAPE_UNPACK)
 	$(Q) touch $(DUKTAPE_UNPACK)/.patch
 
+# Download and unpack tarball if no git repo found
+ifeq ($(wildcard $(DUKTAPE_UNPACK)/.git),)
 context:: $(DUKTAPE_UNPACK)/.patch
 
 distclean::
 	$(call DELDIR, $(DUKTAPE_UNPACK))
 	$(call DELFILE, $(DUKTAPE_TARBALL))
+endif
 
 include $(APPDIR)/Application.mk

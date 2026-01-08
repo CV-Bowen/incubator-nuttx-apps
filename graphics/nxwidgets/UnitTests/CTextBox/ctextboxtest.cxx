@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/graphics/nxwidgets/UnitTests/CTextBox/ctextboxtest.cxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -65,9 +67,9 @@
 
 CTextBoxTest::CTextBoxTest()
 {
-  m_bgWindow = (CBgWindow *)NULL;
-  m_nxFont   = (CNxFont *)NULL;
-  m_text     = (CNxString *)NULL;
+  m_bgWindow = NULL;
+  m_nxFont   = NULL;
+  m_text     = NULL;
 }
 
 // CTextBoxTest Descriptor
@@ -123,7 +125,7 @@ void CTextBoxTest::disconnect(void)
   if (m_text)
     {
       delete m_text;
-      m_text = (CNxString *)NULL;
+      m_text = NULL;
     }
 
   // Free the default font
@@ -131,7 +133,7 @@ void CTextBoxTest::disconnect(void)
   if (m_nxFont)
     {
       delete m_nxFont;
-      m_nxFont = (CNxFont *)NULL;
+      m_nxFont = NULL;
     }
 
   // And disconnect from the server
@@ -155,7 +157,7 @@ bool CTextBoxTest::createWindow(void)
 {
   // Initialize the widget control using the default style
 
-  m_widgetControl = new CWidgetControl((CWidgetStyle *)NULL);
+  m_widgetControl = new CWidgetControl(NULL);
 
   // Get an (uninitialized) instance of the background window as a class
   // that derives from INxWindow.
@@ -192,7 +194,7 @@ CTextBox *CTextBoxTest::createTextBox(void)
   if (!m_bgWindow->getSize(&windowSize))
     {
       printf("CTextBoxTest::createGraphics: Failed to get window size\n");
-      return (CTextBox *)NULL;
+      return NULL;
     }
 
   // Create an empty CNxString instance to contain the C string

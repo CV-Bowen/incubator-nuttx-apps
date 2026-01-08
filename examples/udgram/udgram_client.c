@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/udgram/udgram_client.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -52,6 +54,7 @@ static inline void fill_buffer(unsigned char *buf, int offset)
         {
           j = 1;
         }
+
       buf[j] = ch;
     }
 }
@@ -88,15 +91,14 @@ int main(int argc, FAR char *argv[])
 
       /* Set up the server address */
 
-      addrlen = strlen(CONFIG_EXAMPLES_UDGRAM_ADDR);
-      if (addrlen > UNIX_PATH_MAX - 1)
+      addrlen = sizeof(CONFIG_EXAMPLES_UDGRAM_ADDR);
+      if (addrlen > UNIX_PATH_MAX)
         {
-          addrlen = UNIX_PATH_MAX - 1;
+          addrlen = UNIX_PATH_MAX;
         }
 
       server.sun_family = AF_LOCAL;
-      strncpy(server.sun_path, CONFIG_EXAMPLES_UDGRAM_ADDR, addrlen);
-      server.sun_path[addrlen] = '\0';
+      strlcpy(server.sun_path, CONFIG_EXAMPLES_UDGRAM_ADDR, addrlen);
 
       addrlen += sizeof(sa_family_t) + 1;
 

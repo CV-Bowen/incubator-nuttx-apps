@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/nxtext/nxtext_popup.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -139,6 +141,7 @@ static inline int nxpu_setsize(NXWINDOW hwnd, FAR struct nxgl_size_s *size)
       printf("nxpu_setsize: nx_setsize failed: %d\n", errno);
       g_exitcode = NXEXIT_NXSETSIZE;
     }
+
   return ret;
 }
 
@@ -146,7 +149,8 @@ static inline int nxpu_setsize(NXWINDOW hwnd, FAR struct nxgl_size_s *size)
  * Name: nxpu_setposition
  ****************************************************************************/
 
-static inline int nxpu_setposition(NXWINDOW hwnd, FAR struct nxgl_point_s *pos)
+static inline int nxpu_setposition(NXWINDOW hwnd,
+                                   FAR struct nxgl_point_s *pos)
 {
   int ret = nx_setposition(hwnd, pos);
   if (ret < 0)
@@ -154,6 +158,7 @@ static inline int nxpu_setposition(NXWINDOW hwnd, FAR struct nxgl_point_s *pos)
       printf("nxpu_setposition: nx_setposition failed: %d\n", errno);
       g_exitcode = NXEXIT_NXSETPOSITION;
     }
+
   return ret;
 }
 
@@ -247,6 +252,7 @@ static void nxpu_mousein(NXWINDOW hwnd, FAR const struct nxgl_point_s *pos,
  * Name: nxpu_puts
  ****************************************************************************/
 
+#ifdef CONFIG_NX_KBD
 static inline void nxpu_puts(NXWINDOW hwnd, FAR struct nxtext_state_s *st,
                              uint8_t nch, FAR const uint8_t *ch)
 {
@@ -256,6 +262,7 @@ static inline void nxpu_puts(NXWINDOW hwnd, FAR struct nxtext_state_s *st,
       nxtext_putc(hwnd, st, g_puhfont, *ch++);
     }
 }
+#endif
 
 /****************************************************************************
  * Name: nxpu_kbdin
@@ -392,5 +399,6 @@ int nxpu_close(NXWINDOW hwnd)
       g_exitcode = NXEXIT_NXCLOSEWINDOW;
       return ret;
     }
+
   return OK;
 }

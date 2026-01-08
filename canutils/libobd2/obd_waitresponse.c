@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/canutils/libobd2/obd_waitresponse.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,6 +33,8 @@
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <unistd.h>
+
 #include <nuttx/can/can.h>
 
 #include "canutils/obd.h"
@@ -48,8 +52,8 @@
  *   Wait for a message from ECUs with requested PID that was sent using
  *   obd_send_request().
  *
- *   It will return an error case it doesn't receive the msg after the elapsed
- *   "timeout" time.
+ *   It will return an error case it doesn't receive the msg after the
+ *   elapsed "timeout" time.
  *
  ****************************************************************************/
 
@@ -90,10 +94,10 @@ int obd_wait_response(FAR struct obd_dev_s *dev, uint8_t opmode, uint8_t pid,
           return -EAGAIN;
         }
 
-      #ifdef CONFIG_DEBUG_INFO
+#ifdef CONFIG_DEBUG_INFO
         printf("  ID: %4u DLC: %u\n",
                dev->can_rxmsg.cm_hdr.ch_id, dev->can_rxmsg.cm_hdr.ch_dlc);
-      #endif
+#endif
 
       msgdlc = dev->can_rxmsg.cm_hdr.ch_dlc;
 
@@ -109,10 +113,10 @@ int obd_wait_response(FAR struct obd_dev_s *dev, uint8_t opmode, uint8_t pid,
 
       /* Check if we received a Response Message */
 
-      if ((extended && dev->can_rxmsg.cm_hdr.ch_id == OBD_PID_EXT_RESPONSE) || \
+      if ((extended &&
+           dev->can_rxmsg.cm_hdr.ch_id == OBD_PID_EXT_RESPONSE) ||
           (!extended && dev->can_rxmsg.cm_hdr.ch_id == OBD_PID_STD_RESPONSE))
         {
-
           /* Check if the Response if for the PID we are interested! */
 
           if (dev->can_rxmsg.cm_data[1] == (opmode + OBD_RESP_BASE) && \

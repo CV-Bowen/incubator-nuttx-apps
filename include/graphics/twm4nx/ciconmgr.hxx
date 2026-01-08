@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/include/graphics/twm4nx/ciconmgr.hxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -77,7 +79,7 @@ namespace Twm4Nx
       NXWidgets::CNxString            m_name;       /**< The Icon Manager name */
       FAR struct SWindowEntry        *m_head;       /**< Head of the window list */
       FAR struct SWindowEntry        *m_tail;       /**< Tail of the window list */
-      FAR struct CWindow             *m_window;     /**< Parent window */
+      FAR CWindow                    *m_window;     /**< Parent window */
       FAR NXWidgets::CButtonArray    *m_buttons;    /**< The contained button array */
       uint16_t                        m_nWindows;   /**< The number of windows in the icon mgr. */
       uint8_t                         m_nColumns;   /**< Fixed number of columns per row */

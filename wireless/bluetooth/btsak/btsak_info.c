@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/wireless/bluetooth/btsak/btsak_info.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -33,6 +35,7 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include <nuttx/wireless/bluetooth/bt_core.h>
 #include <nuttx/wireless/bluetooth/bt_hci.h>
@@ -90,7 +93,7 @@ void btsak_cmd_info(FAR struct btsak_s *btsak, int argc, FAR char *argv[])
   /* Perform the IOCTL to stop advertising */
 
   memset(&btreq, 0, sizeof(struct btreq_s));
-  strncpy(btreq.btr_name, btsak->ifname, IFNAMSIZ);
+  strlcpy(btreq.btr_name, btsak->ifname, IFNAMSIZ);
 
   sockfd = btsak_socket(btsak);
   if (sockfd >= 0)

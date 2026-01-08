@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/noteprintf/noteprintf_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -23,7 +25,9 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
 #include <stdio.h>
+#include <unistd.h>
 
 #include "nuttx/sched_note.h"
 
@@ -43,23 +47,13 @@
 
 int main(int argc, FAR char *argv[])
 {
-  struct binary
-    {
-      uint8_t val1;
-      uint8_t val2;
-    } binary =
-      {
-        .val1        = 0x01,
-        .val2        = 0x02
-      };
-
-  char *str      = "shced note test";
+  char *str      = "sched note test";
   int count      = 0;
   char c         = 1;
   short s        = 2;
   int i          = 3;
   long l         = 4;
-#ifdef CONFIG_LIBC_LONG_LONG
+#ifdef CONFIG_HAVE_LONG_LONG
   long long ll   = 5;
 #endif
   intmax_t im    = 6;
@@ -77,29 +71,31 @@ int main(int argc, FAR char *argv[])
 
   while (1)
     {
-      sched_note_printf("shced note test count = %d.", count++);
-      sched_note_string(str);
-      sched_note_dump(MAIN_MODULE, 1, &binary, sizeof(struct binary));
-      sched_note_bprintf(MAIN_MODULE, 2, "%hhd", c);
-      sched_note_bprintf(MAIN_MODULE, 3, "%hd", s);
-      sched_note_bprintf(MAIN_MODULE, 4, "%d", i);
-      sched_note_bprintf(MAIN_MODULE, 5, "%ld", l);
-      sched_note_bprintf(MAIN_MODULE, 6, "%lld", ll);
-      sched_note_bprintf(MAIN_MODULE, 7, "%jd", im);
-      sched_note_bprintf(MAIN_MODULE, 8, "%zd", sz);
-      sched_note_bprintf(MAIN_MODULE, 9, "%td", ptr);
+      sched_note_printf(NOTE_TAG_ALWAYS,
+                        "sched note test count = %d.", count++);
+      sched_note_mark(NOTE_TAG_ALWAYS, str);
+      sched_note_printf(NOTE_TAG_ALWAYS, "%hhd", c);
+      sched_note_printf(NOTE_TAG_ALWAYS, "%hd", s);
+      sched_note_printf(NOTE_TAG_ALWAYS, "%d", i);
+      sched_note_printf(NOTE_TAG_ALWAYS, "%ld", l);
+#ifdef CONFIG_HAVE_LONG_LONG
+      sched_note_printf(NOTE_TAG_ALWAYS, "%lld", ll);
+#endif
+      sched_note_printf(NOTE_TAG_ALWAYS, "%jd", im);
+      sched_note_printf(NOTE_TAG_ALWAYS, "%zd", sz);
+      sched_note_printf(NOTE_TAG_ALWAYS, "%td", ptr);
 #ifdef CONFIG_HAVE_FLOAT
-      sched_note_bprintf(MAIN_MODULE, 10, "%e", f);
+      sched_note_printf(NOTE_TAG_ALWAYS, "%e", f);
 #endif
 #ifdef CONFIG_HAVE_DOUBLE
-      sched_note_bprintf(MAIN_MODULE, 11, "%le", d);
+      sched_note_printf(NOTE_TAG_ALWAYS, "%le", d);
 #endif
 #ifdef CONFIG_HAVE_LONG_DOUBLE
-      sched_note_bprintf(MAIN_MODULE, 12, "%Le", ld);
+      sched_note_printf(NOTE_TAG_ALWAYS, "%Le", ld);
 #endif
-      sched_note_bprintf(MAIN_MODULE, 13,
-                         "%hhd  %hd  %d  %ld  %lld  %jd  %zd  %td",
-                          c,    s,   i,  l,    ll,  im,  sz,  ptr);
+      sched_note_printf(NOTE_TAG_ALWAYS,
+                        "%hhd  %hd  %d  %ld  %lld  %jd  %zd  %td",
+                        c,    s,   i,  l,    ll,  im,  sz,  ptr);
       usleep(10);
     }
 

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/poll/poll_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -134,7 +136,8 @@ int main(int argc, FAR char *argv[])
   ret = pthread_create(&tid2, NULL, select_listener, NULL);
   if (ret != 0)
     {
-      printf("poll_main: Failed to create select_listener thread: %d\n", ret);
+      printf("poll_main: Failed to create select_listener thread: %d\n",
+             ret);
       exitcode = 6;
       goto errout;
     }
@@ -155,6 +158,10 @@ int main(int argc, FAR char *argv[])
     }
 #endif
 
+  /* Let the pthreads run first */
+
+  sleep(1);
+
   /* Loop forever */
 
   for (count = 0; ; count++)
@@ -163,7 +170,7 @@ int main(int argc, FAR char *argv[])
        * from the poll.
        */
 
-      sprintf(buffer, "Message %d", count);
+      snprintf(buffer, sizeof(buffer), "Message %d", count);
       nbytes = write(fd1, buffer, strlen(buffer));
       if (nbytes < 0)
         {

@@ -56,7 +56,6 @@
 #include <net/if.h>
 #include <netinet/in.h>
 
-#include <nuttx/net/arp.h>
 #include "netutils/netlib.h"
 
 #ifdef CONFIG_EXAMPLES_WEBSERVER_DHCPC
@@ -70,7 +69,7 @@
 /* DHCPC may be used in conjunction with any other feature (or not) */
 
 #ifdef CONFIG_EXAMPLES_WEBSERVER_DHCPC
-# include "netutils/dhcpc.h"
+#  include "netutils/dhcpc.h"
 #endif
 
 /* Include uIP webserver definitions */
@@ -82,6 +81,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifndef CONFIG_NETUTILS_WEBSERVER
+#  error "CONFIG_NETUTILS_WEBSERVER is required to get WebServer working"
+#endif
 
 /****************************************************************************
  * Private Data
@@ -107,7 +110,7 @@ int main(int argc, FAR char *argv[])
   uint8_t mac[IFHWADDRLEN];
 #endif
 #ifdef CONFIG_EXAMPLES_WEBSERVER_DHCPC
-  void *handle;
+  FAR void *handle;
 #endif
 
   /* Many embedded network interfaces must have a software assigned MAC */
@@ -165,6 +168,9 @@ int main(int argc, FAR char *argv[])
   if (handle)
     {
       struct dhcpc_state ds;
+      char inetaddr[INET_ADDRSTRLEN];
+      int ret;
+
       dhcpc_request(handle, &ds);
       netlib_set_ipv4addr("eth0", &ds.ipaddr);
 
@@ -178,13 +184,21 @@ int main(int argc, FAR char *argv[])
           netlib_set_dripv4addr("eth0", &ds.default_router);
         }
 
-      if (ds.dnsaddr.s_addr != 0)
+      for (int i = 0; i < ds.num_dnsaddr; i++)
         {
-          netlib_set_ipv4dnsaddr(&ds.dnsaddr);
+          if (ds.dnsaddr[i].s_addr != 0)
+            {
+              ret = netlib_set_ipv4dnsaddr(&ds.dnsaddr[i]);
+              if (ret < 0)
+                {
+                  nerr("ERROR: Set DNS server %d:%s address failed: %d\n",
+                       i, inet_ntoa(ds.dnsaddr[i]), ret);
+                }
+            }
         }
 
       dhcpc_close(handle);
-      printf("IP: %s\n", inet_ntoa(ds.ipaddr));
+      printf("IP: %s\n", inet_ntoa_r(ds.ipaddr, inetaddr, sizeof(inetaddr)));
     }
 #endif
 #endif /* CONFIG_NSH_NETINIT */

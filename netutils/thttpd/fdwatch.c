@@ -1,14 +1,10 @@
 /****************************************************************************
- * apps/netutils/thttpd/timers.c
- * FD watcher routines for poll()
+ * apps/netutils/thttpd/fdwatch.c
  *
- *   Copyright (C) 2009 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * Derived from the file of the same name in the original THTTPD package:
- *
- *   Copyright (C) 1999,2000 by Jef Poskanzer <jef@mail.acme.com>.
- *   All rights reserved.
+ * SPDX-License-Identifier: BSD-2-Clause
+ * SPDX-FileCopyrightText: 2009 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 1999,2000 by Jef Poskanzer <jef@mail.acme.com>.
+ * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,9 +38,9 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <sys/param.h>
 #include <debug.h>
 #include <poll.h>
-#include <debug.h>
 
 #include "config.h"
 #include "thttpd_alloc.h"
@@ -66,10 +62,6 @@
 #else
 #  define fwerr    _none
 #  define fwinfo   _none
-#endif
-
-#ifndef MIN
-#  define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
 /****************************************************************************
@@ -296,7 +288,7 @@ int fdwatch(struct fdwatch_s *fw, long timeout_msecs)
             {
               /* Yes... save it in a shorter list */
 
-              fwinfo("pollndx: %d fd: %d revents: %04x\n",
+              fwinfo("pollndx: %d fd: %d revents: %08" PRIx32 "\n",
                     i, fw->pollfds[i].fd, fw->pollfds[i].revents);
 
               fw->ready[fw->nactive++] = fw->pollfds[i].fd;
@@ -344,7 +336,7 @@ void *fdwatch_get_next_client_data(struct fdwatch_s *fw)
   if (fw->next >= fw->nwatched)
     {
       fwinfo("All client data returned: %d\n", fw->next);
-      return (void *)-1;
+      return (void *)(uintptr_t)-1;
     }
 
   fwinfo("client_data[%d]: %p\n", fw->next, fw->client[fw->next]);

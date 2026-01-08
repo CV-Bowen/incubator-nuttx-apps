@@ -1,6 +1,8 @@
 ############################################################################
 # apps/examples/ajoystick/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -20,11 +22,11 @@
 
 include $(APPDIR)/Make.defs
 
-# Hello, World! Example
+# AJOYSTICK Example
 
 MAINSRC = ajoy_main.c
 
-# Buttons built-in application info
+# AJOYSTICK built-in application info
 
 PROGNAME = ajoy
 PRIORITY = SCHED_PRIORITY_DEFAULT

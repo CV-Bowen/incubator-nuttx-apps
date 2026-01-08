@@ -1,5 +1,7 @@
 /****************************************************************************
- * apps/examples/examples/qe/qe.h
+ * apps/examples/qencoder/qe.h
+ *
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -39,6 +41,7 @@ struct qe_example_s
 {
   FAR char    *devpath;     /* Path to the QE device */
   bool         reset;       /* True: set the count back to zero */
+  bool         use_qeindex; /* True: use the QEIOC_GETINDEX call to get samples */
   unsigned int nloops;      /* Collect this number of samples */
   unsigned int delay;       /* Delay this number of seconds between samples */
 };

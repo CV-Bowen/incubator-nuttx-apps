@@ -1,6 +1,8 @@
 //***************************************************************************
 // apps/examples/helloxx/helloxx_main.cxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -35,8 +37,8 @@
 // Debug ********************************************************************
 // Non-standard debug that may be enabled just for testing the constructors
 
-#ifndef CONFIG_DEBUG_FEATURES
-#  undef CONFIG_DEBUG_CXX
+#ifdef CONFIG_DEBUG_FEATURES
+#  define CONFIG_DEBUG_CXX
 #endif
 
 #ifdef CONFIG_DEBUG_CXX

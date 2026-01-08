@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/nxtext/nxtext_putc.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -570,7 +572,7 @@ void nxtext_fillchar(NXWINDOW hwnd, FAR const struct nxgl_rect_s *rect,
 
       /* Blit the font bitmap into the window */
 
-      src = (FAR const void *)glyph->bitmap;
+      src = glyph->bitmap;
       ret = nx_bitmap((NXWINDOW)hwnd, &intersection, &src,
                       &bm->pos, (unsigned int)glyph->stride);
       if (ret < 0)

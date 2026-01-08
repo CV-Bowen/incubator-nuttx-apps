@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/examples/elf/tests/helloxx/hello++5.cxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -37,7 +39,7 @@
 #include <string>
 
 #ifndef NULL
-# define NULL ((void*)0L)
+#  define NULL ((void*)0L)
 #endif
 
 /////////////////////////////////////////////////////////////////////////////
@@ -89,7 +91,7 @@ static CThingSayer MyThingSayer;
 
 MyException::MyException(std::string r = NULL) : reason(r)
 {
-  if( r.length() > 0 )
+  if(r.length() > 0)
     {
       cout << "MyException(" << r << "):  constructing with reason." << endl;
     }
@@ -118,7 +120,7 @@ const char *MyException::what() const throw()
 CThingSayer::CThingSayer(void)
 {
   cout << "CThingSayer::CThingSayer: I am!" << endl;
-  szWhatToSay = (const char*)NULL;
+  szWhatToSay = NULL;
 }
 
 CThingSayer::~CThingSayer(void)
@@ -129,7 +131,7 @@ CThingSayer::~CThingSayer(void)
       cout << "CThingSayer::~CThingSayer: I will never say '"
      << szWhatToSay << "' again" << endl;
     }
-  szWhatToSay = (const char*)NULL;
+  szWhatToSay = NULL;
 }
 
 void CThingSayer::Initialize(const char *czSayThis)
@@ -154,7 +156,7 @@ void CThingSayer::ThrowThing(void)
 void CThingSayer::ThrowMyThing(const char *czSayThis = NULL)
 {
   cout << "CThingSayer::ThrowMyThing: I am now throwing an MyException (with reason)." << endl;
-  throw MyException( string(czSayThis) );
+  throw MyException(string(czSayThis));
 }
 
 /////////////////////////////////////////////////////////////////////////////

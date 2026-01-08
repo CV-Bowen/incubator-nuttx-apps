@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/netlib/netlib_getnbtab.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -123,7 +125,7 @@ ssize_t netlib_get_nbtable(FAR struct neighbor_entry_s *nbtab,
 
   /* Bind the socket so that we can use send() and receive() */
 
-  pid            = getpid();
+  pid            = gettid();
   addr.nl_family = AF_NETLINK;
   addr.nl_pad    = 0;
   addr.nl_pid    = pid;

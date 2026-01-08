@@ -1,6 +1,8 @@
 ############################################################################
 # apps/math/libtommath/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -53,10 +55,12 @@ bn_s_mp_rand_jenkins.c bn_s_mp_rand_platform.c bn_s_mp_reverse.c bn_s_mp_sqr.c b
 bn_s_mp_sub.c bn_s_mp_toom_mul.c bn_s_mp_toom_sqr.c
 
 VPATH += $(LIBTOMMATH_UNPACKNAME)
+DEPPATH += --dep-path $(LIBTOMMATH_UNPACKNAME)
 
 ifneq ($(CONFIG_LIBTOMMATH_DEMOS),)
 CSRCS += shared.c
 VPATH += $(LIBTOMMATH_UNPACKNAME)/demo
+DEPPATH += --dep-path $(LIBTOMMATH_UNPACKNAME)/demo
 
 ifneq ($(CONFIG_LIBTOMMATH_TEST),)
 MAINSRC += test.c
@@ -82,6 +86,16 @@ PRIORITY += $(CONFIG_LIBTOMMATH_TIMING_PRIORITY)
 STACKSIZE += $(CONFIG_LIBTOMMATH_TIMING_STACKSIZE)
 endif
 
+ifneq ($(CONFIG_LIBTOMMATH_MTEST),)
+MAINSRC += mtest.c
+VPATH += $(LIBTOMMATH_UNPACKNAME)/mtest
+DEPPATH += --dep-path $(LIBTOMMATH_UNPACKNAME)/mtest
+
+PROGNAME += $(CONFIG_LIBTOMMATH_MTEST_PROGNAME)
+PRIORITY += $(CONFIG_LIBTOMMATH_MTEST_PRIORITY)
+STACKSIZE += $(CONFIG_LIBTOMMATH_MTEST_STACKSIZE)
+endif
+
 endif
 # Set up build configuration and environment
 
@@ -103,10 +117,13 @@ $(LIBTOMMATH_UNPACKNAME): $(LIBTOMMATH_ZIP)
 	$(Q) mv	libtommath-$(LIBTOMMATH_VERSION) $(LIBTOMMATH_UNPACKNAME)
 	$(Q) touch $(LIBTOMMATH_UNPACKNAME)
 
+# Download and unpack tarball if no git repo found
+ifeq ($(wildcard $(LIBTOMMATH_UNPACKNAME)/.git),)
 context:: $(LIBTOMMATH_UNPACKNAME)
 
 distclean::
 	$(call DELDIR, $(LIBTOMMATH_UNPACKNAME))
 	$(call DELFILE, $(LIBTOMMATH_ZIP))
+endif
 
 include $(APPDIR)/Application.mk

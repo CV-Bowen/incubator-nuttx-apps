@@ -1,6 +1,8 @@
 #############################################################################
 # apps/netutils/cjson/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -31,8 +33,8 @@ CONFIG_NETUTILS_CJSON_VERSION ?= "1.7.10"
 CJSON_VERSION = $(patsubst "%",%,$(strip $(CONFIG_NETUTILS_CJSON_VERSION)))
 
 CJSON_TARBALL = v$(CJSON_VERSION).tar.gz
+CJSON_UNPACKNAME = cJSON
 
-CJSON_UNPACKNAME = cJSON-$(CJSON_VERSION)
 UNPACK ?= tar -zxf
 
 CJSON_UNPACKDIR =  $(WD)/$(CJSON_UNPACKNAME)
@@ -40,12 +42,14 @@ CJSON_SRCDIR = $(CJSON_UNPACKNAME)
 
 APPS_INCDIR = $(APPDIR)$(DELIM)include$(DELIM)netutils
 
-CFLAGS += ${shell $(INCDIR) "$(CC)" $(APPS_INCDIR)}
+CFLAGS += ${INCDIR_PREFIX}$(APPS_INCDIR)
 CFLAGS += -DCJSON_INCLUDE_CONFIG_H
 
 CSRCS = $(CJSON_SRCDIR)$(DELIM)cJSON.c
 CSRCS += $(CJSON_SRCDIR)$(DELIM)cJSON_Utils.c
 
+# Download and unpack tarball if no git repo found
+ifeq ($(wildcard $(CJSON_UNPACKNAME)/.git),)
 $(CJSON_TARBALL):
 	@echo "Downloading: $(CJSON_TARBALL)"
 	$(Q) curl -O -L $(CONFIG_NETUTILS_CJSON_URL)/$(CJSON_TARBALL)
@@ -53,7 +57,30 @@ $(CJSON_TARBALL):
 $(CJSON_UNPACKNAME): $(CJSON_TARBALL)
 	@echo "Unpacking: $(CJSON_TARBALL) -> $(CJSON_UNPACKNAME)"
 	$(Q) $(UNPACK) $(CJSON_TARBALL)
+	$(Q) mv cJSON-$(CJSON_VERSION) $(CJSON_UNPACKNAME)
 	$(Q) touch $(CJSON_UNPACKNAME)
+endif
+
+ifneq ($(CONFIG_NETUTILS_CJSON_TEST),)
+PROGNAME += cjson_test
+MAINSRC += $(CJSON_SRCDIR)$(DELIM)test.c
+
+UNITY_CJSONTESTS := parse_examples parse_number parse_hex4 parse_string parse_array \
+	parse_object parse_value print_string print_number print_array print_object \
+	print_value cjson_add parse_with_opts compare_tests readme_examples minify_tests \
+	misc_tests json_patch_tests old_utils_tests misc_utils_tests
+UNITY_CJSONTESTCS := $(foreach n, $(UNITY_CJSONTESTS), $(CJSON_SRCDIR)$(DELIM)tests$(DELIM)$(n).c)
+CJSONTEST_MAIN := $(foreach n, $(UNITY_CJSONTESTS), cjson_$(n))
+PROGNAME += $(CJSONTEST_MAIN)
+MAINSRC += $(UNITY_CJSONTESTCS)
+
+CSRCS += $(CJSON_SRCDIR)/tests/unity_setup.c
+CFLAGS += -Wno-unused-function
+CFLAGS += -DCJSON_NESTING_LIMIT=CONFIG_CJSON_NESTING_LIMIT
+
+PRIORITY  = $(CONFIG_CJSON_TEST_PRIORITY)
+STACKSIZE = $(CONFIG_CJSON_TEST_STACKSIZE)
+endif
 
 $(CJSON_SRCDIR)$(DELIM)cJSON.h: $(CJSON_UNPACKNAME)
 
@@ -68,8 +95,10 @@ $(APPS_INCDIR)$(DELIM)cJSON_Utils.h: $(CJSON_SRCDIR)$(DELIM)cJSON_Utils.h
 context:: $(APPS_INCDIR)$(DELIM)cJSON.h $(APPS_INCDIR)$(DELIM)cJSON_Utils.h
 
 distclean::
+ifeq ($(wildcard $(CJSON_UNPACKNAME)/.git),)
 	$(call DELDIR, $(CJSON_UNPACKNAME))
 	$(call DELFILE, $(CJSON_TARBALL))
+endif
 	$(call DELFILE, $(APPDIR)/include/netutils/cJSON.h)
 	$(call DELFILE, $(APPDIR)/include/netutils/cJSON_Utils.h)
 

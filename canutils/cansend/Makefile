@@ -1,6 +1,8 @@
 ############################################################################
 # apps/canutils/cansend/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -28,7 +30,7 @@ PRIORITY = SCHED_PRIORITY_DEFAULT
 STACKSIZE = $(CONFIG_CANUTILS_CANSEND_STACKSIZE)
 MODULE = $(CONFIG_CANUTILS_CANSEND)
 
-CFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/canutils/libcanutils}
+CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/canutils/libcanutils
 MAINSRC = cansend.c
 
 include $(APPDIR)/Application.mk

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/system/i2c/i2ctool.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -112,7 +114,7 @@
 
 /* Output is via printf but can be changed using this macro */
 
-# define i2c_output         printf
+#  define i2c_output         printf
 
 /****************************************************************************
  * Public Types
@@ -127,6 +129,7 @@ struct i2ctool_s
   uint8_t  regaddr;    /* [-r regaddr] is the I2C device register address */
   uint8_t  width;      /* [-w width] is the data width (8 or 16) */
   bool     start;      /* [-s|n], send|don't send start between command and data */
+  bool     zerowrite;  /* [-z] uses a zero byte write request to scan the I2C bus */
   bool     autoincr;   /* [-i|j], Auto increment|don't increment regaddr on repetitions */
   bool     hasregindx; /* true with the use of -r */
   uint32_t freq;       /* [-f freq] I2C frequency */
@@ -134,8 +137,8 @@ struct i2ctool_s
   /* Output streams */
 
 #ifdef CONFIG_I2CTOOL_OUTDEV
-  int    ss_outfd;     /* Output file descriptor */
-  FILE  *ss_outstream; /* Output stream */
+  int   ss_outfd;     /* Output file descriptor */
+  FILE *ss_outstream; /* Output stream */
 #endif
 };
 
@@ -170,7 +173,8 @@ extern const char g_i2cxfrerror[];
 
 ssize_t i2ctool_write(FAR struct i2ctool_s *i2ctool, FAR const void *buffer,
                       size_t nbytes);
-int i2ctool_printf(FAR struct i2ctool_s *i2ctool, const char *fmt, ...);
+int i2ctool_printf(FAR struct i2ctool_s *i2ctool,
+                   FAR const char *fmt, ...) printf_like(2, 3);
 void i2ctool_flush(FAR struct i2ctool_s *i2ctool);
 void i2ctool_hexdump(FILE *outstream, void *addr, int len);
 

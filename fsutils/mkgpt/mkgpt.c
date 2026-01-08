@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/fsutils/mkgpt/mkgpt.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -22,7 +24,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <crc32.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -31,9 +32,12 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
+#include <debug.h>
 
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+
+#include <nuttx/crc32.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -127,13 +131,7 @@ static const uint8_t g_partition_type_swap[16] =
 
 static void get_uuid(FAR uint8_t *uuid)
 {
-  int fd;
-  fd = open("/dev/urandom", O_RDONLY);
-  if (fd > 0)
-    {
-      read(fd, uuid, 16);
-      close(fd);
-    }
+  arc4random_buf(uuid, 16);
 }
 
 static void init_mbr(FAR uint8_t *mbr, uint32_t blocks)
@@ -472,6 +470,12 @@ int main(int argc, FAR char **argv)
         }
 
       ret = verify_gpt_pratition(ptbl);
+      if (ret < 0)
+        {
+          lib_dumpbuffer("Dump GPT partition:", (FAR uint8_t *)ptbl,
+                         sizeof(*ptbl));
+        }
+
       goto out;
     }
 

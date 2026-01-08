@@ -1,6 +1,8 @@
 ############################################################################
 # apps/examples/posix_spawn/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -24,6 +26,8 @@ include $(APPDIR)/Make.defs
 
 CSRCS = romfs.c
 CSRCS += symtab.c
+filesystem$(DELIM)symtab.c_CFLAGS = -fno-builtin
+filesystem$(DELIM)symtab.c_CELFFLAGS = -fno-builtin
 MAINSRC = spawn_main.c
 
 PROGNAME = posix_spawn

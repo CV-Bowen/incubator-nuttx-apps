@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/usrsocktest/usrsocktest_basic_daemon.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -333,7 +335,7 @@ static void basic_daemon_dup2(FAR struct usrsocktest_daemon_conf_s *dconf)
   TEST_ASSERT_EQUAL(2, usrsocktest_daemon_get_num_active_sockets());
 
   ret = dup2(sd2, sd);
-  TEST_ASSERT_EQUAL(0, ret);
+  TEST_ASSERT_EQUAL(sd, ret);
   TEST_ASSERT_EQUAL(1, usrsocktest_daemon_get_num_active_sockets());
 
   ret = close(sd2);
@@ -502,29 +504,29 @@ TEST_SETUP(basic_daemon)
 
 TEST_TEAR_DOWN(basic_daemon)
 {
-  int ret;
+  int unused_data ret;
   if (sd >= 0)
     {
       ret = close(sd);
-      assert(ret >= 0);
+      TEST_ASSERT_TRUE(ret >= 0);
     }
 
   if (sd2 >= 0)
     {
       ret = close(sd2);
-      assert(ret >= 0);
+      TEST_ASSERT_TRUE(ret >= 0);
     }
 
   if (sd3 >= 0)
     {
       ret = close(sd3);
-      assert(ret >= 0);
+      TEST_ASSERT_TRUE(ret >= 0);
     }
 
   if (started)
     {
       ret = usrsocktest_daemon_stop();
-      assert(ret == OK);
+      TEST_ASSERT_EQUAL(ret, OK);
     }
 }
 

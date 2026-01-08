@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/include/nshlib/nshlib.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -60,10 +62,29 @@
 #endif
 
 #if CONFIG_RR_INTERVAL > 0
-# define SCHED_NSH SCHED_RR
+#  define SCHED_NSH SCHED_RR
 #else
-# define SCHED_NSH SCHED_FIFO
+#  define SCHED_NSH SCHED_FIFO
 #endif
+
+struct nsh_param_s
+{
+  /* Redirect input/output through `fd` OR `path_name`
+   *
+   * Select one:
+   * 1. Using fd_in/fd_out as oldfd for dup2() if greater than -1.
+   * 2. Using file_in/file_out as full path to the file if it is
+   *    not NULL, and oflags_in/oflags_out as flags for open().
+   */
+
+  int fd_in;
+  int fd_out;
+
+  int oflags_in;
+  int oflags_out;
+  FAR const char *file_in;
+  FAR const char *file_out;
+};
 
 /****************************************************************************
  * Public Data
@@ -127,6 +148,27 @@ void nsh_initialize(void);
 int nsh_consolemain(int argc, FAR char *argv[]);
 
 /****************************************************************************
+ * Name: nsh_telnetmain
+ *
+ * Description:
+ *   This interface may be called or started with task_start to start a
+ *   single NSH instance that operates on stdin and stdout for telnet daemon.
+ *   This function does not return.
+ *
+ * Input Parameters:
+ *   Standard task start-up arguments.  These are not used.  argc may be
+ *   zero and argv may be NULL.
+ *
+ * Returned Values:
+ *   This function does not normally return.  exit() is usually called to
+ *   terminate the NSH session.  This function will return in the event of
+ *   an error.  In that case, a non-zero value is returned (EXIT_FAILURE=1).
+
+ ****************************************************************************/
+
+int nsh_telnetmain(int argc, FAR char *argv[]);
+
+/****************************************************************************
  * Name: nsh_telnetstart
  *
  * Description:
@@ -172,6 +214,46 @@ void platform_motd(FAR char *buffer, size_t buflen);
 #endif
 
 /****************************************************************************
+ * Name: platform_skip_login
+ *
+ * Description:
+ *   If CONFIG_NSH_PLATFORM_SKIP_LOGIN is defined, then platform-specific
+ *   logic must provide this function in order to skip login.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned value:
+ *   OK   - need to skip login
+ *   else - no need to skip login
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NSH_PLATFORM_SKIP_LOGIN
+int platform_skip_login(void);
+#endif
+
+/****************************************************************************
+ * Name: platform_challenge
+ *
+ * Description:
+ *   If CONFIG_NSH_PLATFORM_CHALLENGE is defined, then platform-specific
+ *   logic must provide this function in order get the challenge.
+ *
+ * Input Parameters:
+ *   buffer - A caller allocated buffer in which to receive the challenge
+ *   buflen - The length in bytes of the caller allocated buffer
+ *
+ * Returned value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NSH_PLATFORM_CHALLENGE
+void platform_challenge(FAR char *buffer, size_t buflen);
+#endif
+
+/****************************************************************************
  * Name: platform_user_verify
  *
  * Description:
@@ -190,7 +272,12 @@ void platform_motd(FAR char *buffer, size_t buflen);
  ****************************************************************************/
 
 #ifdef CONFIG_NSH_LOGIN_PLATFORM
+#ifdef CONFIG_NSH_PLATFORM_CHALLENGE
+int platform_user_verify(FAR const char *username, FAR const char *challenge,
+                         FAR const char *password);
+#else
 int platform_user_verify(FAR const char *username, FAR const char *password);
+#endif
 #endif
 
 /****************************************************************************
@@ -213,6 +300,27 @@ int platform_user_verify(FAR const char *username, FAR const char *password);
  ****************************************************************************/
 
 int nsh_system(int argc, FAR char *argv[]);
+
+/****************************************************************************
+ * Name: nsh_system_ctty
+ *
+ * Description:
+ *   This is the NSH-specific implementation of the standard system()
+ *   command.
+ *
+ *   NOTE:
+ *   This difference with nsh_system: newconsole set isctty true
+ *
+ * Input Parameters:
+ *   Standard task start-up arguments.  Expects argc == 2 with argv[1] being
+ *   the command to execute
+ *
+ * Returned Values:
+ *   EXIT_SUCCESS or EXIT_FAILURE
+ *
+ ****************************************************************************/
+
+int nsh_system_ctty(int argc, FAR char *argv[]);
 
 #undef EXTERN
 #ifdef __cplusplus

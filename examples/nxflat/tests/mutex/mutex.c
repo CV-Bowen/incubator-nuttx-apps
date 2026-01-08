@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/nxflat/tests/mutex/mutex.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -103,7 +105,7 @@ int main(int argc, char **argv)
 
   printf("Starting thread 1\n");
   bendoftest = false;
-  if ((pthread_create(&thread1, NULL, (void*)thread_func, (void*)1)) != 0)
+  if ((pthread_create(&thread1, NULL, (void*)thread_func, (void *)1)) != 0)
     {
       fprintf(stderr, "Error in thread#1 creation\n");
     }

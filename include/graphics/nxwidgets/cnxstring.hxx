@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/include/cnxtring.hxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -209,7 +211,7 @@ namespace NXWidgets
     virtual inline ~CNxString()
     {
       delete[] m_text;
-      m_text = (FAR nxwidget_char_t *)NULL;
+      m_text = NULL;
     };
 
     /**
@@ -510,7 +512,7 @@ namespace NXWidgets
      * @return New CNxString instance.
      */
 
-    static CNxString format(const char *fmt, ...);
+    static CNxString format(const char *fmt, ...) printf_like(1, 2);
   };
 }
 

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/graphics/nxwidgets/src/cwidgetcontrol.cxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -27,9 +29,10 @@
 #include <cstdint>
 #include <cstdbool>
 #include <cstring>
-#include <csched>
 #include <cerrno>
+
 #include <debug.h>
+#include <sched.h>
 
 #include "graphics/nxwidgets/nxconfig.hxx"
 #include "graphics/nxwidgets/cnxserver.hxx"
@@ -68,10 +71,10 @@ CWidgetControl::CWidgetControl(FAR const CWidgetStyle *style)
 {
   // Initialize state
 
-  m_port               = (CGraphicsPort *)NULL;
+  m_port               = NULL;
   m_haveGeometry       = false;
-  m_clickedWidget      = (CNxWidget *)NULL;
-  m_focusedWidget      = (CNxWidget *)NULL;
+  m_clickedWidget      = NULL;
+  m_focusedWidget      = NULL;
 
   // Initialize data that we will get from the position callback
 
@@ -109,7 +112,7 @@ CWidgetControl::CWidgetControl(FAR const CWidgetStyle *style)
 
   // Do we need to fetch the default style?
 
-  if (style == (CWidgetStyle *)NULL)
+  if (style == NULL)
     {
       // Get the style from the controlling widget
 
@@ -311,7 +314,7 @@ void CWidgetControl::setClickedWidget(CNxWidget *widget)
 {
   // Do we have a clicked widget already?
 
-  if (m_clickedWidget != (CNxWidget *)NULL)
+  if (m_clickedWidget != NULL)
     {
       // Ensure that the existing clicked widget is released *outside* its bounds
 
@@ -644,7 +647,7 @@ bool CWidgetControl::createGraphicsPort(INxWindow *window)
 #else
   m_port = new CGraphicsPort(window);
 #endif
-  return m_port != (CGraphicsPort *)NULL;
+  return m_port != NULL;
 }
 
 /**
@@ -731,7 +734,7 @@ bool CWidgetControl::handleLeftClick(nxgl_coord_t x, nxgl_coord_t y,
 {
   // Working with a specific widget or the whole structure?
 
-  if (widget == (CNxWidget *)NULL)
+  if (widget == NULL)
     {
       // All widgets
 
@@ -800,7 +803,7 @@ bool CWidgetControl::pollMouseEvents(CNxWidget *widget)
     {
       // The left button is still being held down
 
-      if (m_clickedWidget != (CNxWidget *)NULL)
+      if (m_clickedWidget != NULL)
         {
           // Handle a mouse drag event
 
@@ -813,7 +816,7 @@ bool CWidgetControl::pollMouseEvents(CNxWidget *widget)
 
   // Check for release event on the clicked widget
 
-  if (!mouseEvent && m_clickedWidget != (CNxWidget *)NULL)
+  if (!mouseEvent && m_clickedWidget != NULL)
     {
       // Mouse left button release event
 
@@ -848,7 +851,7 @@ bool CWidgetControl::pollKeyboardEvents(void)
   // Keyboard presses with no focused widget is not an interesting
   // event
 
-  if (m_focusedWidget != (CNxWidget *)NULL)
+  if (m_focusedWidget != NULL)
     {
       // Forward each character to the widget with the focus
 
@@ -878,7 +881,7 @@ bool CWidgetControl::pollCursorControlEvents(void)
   // Cursor controls with no focused widget is not an interesting
   // event
 
-  if (m_focusedWidget != (CNxWidget *)NULL)
+  if (m_focusedWidget != NULL)
     {
       // Forward each cursor control to the widget with the focus
 

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/libcurl4nx/curl4nx_easy_init.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -43,7 +45,7 @@
  * Name: curl4nx_easy_init()
  ****************************************************************************/
 
-FAR struct curl4nx_s * curl4nx_easy_init(void)
+FAR struct curl4nx_s *curl4nx_easy_init(void)
 {
   FAR struct curl4nx_s *handle = malloc(sizeof(struct curl4nx_s));
 

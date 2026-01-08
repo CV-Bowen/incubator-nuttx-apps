@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/system/nsh/sh_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -49,5 +51,5 @@ int main(int argc, FAR char *argv[])
    * system() and popen() interfaces.
    */
 
-  return nsh_system(argc, argv);
+  return nsh_system_ctty(argc, argv);
 }

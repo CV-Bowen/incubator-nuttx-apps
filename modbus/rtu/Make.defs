@@ -1,6 +1,8 @@
 ############################################################################
 # apps/modbus/rtu/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -38,6 +40,6 @@ endif
 
 DEPPATH += --dep-path rtu
 VPATH += :rtu
-CFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/modbus/rtu}
+CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/modbus/rtu
 
 endif

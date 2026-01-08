@@ -1,6 +1,8 @@
 ############################################################################
 # apps/graphics/lvgl/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -25,55 +27,67 @@ include $(APPDIR)/Make.defs
 LVGL_DIR = .
 LVGL_DIR_NAME = lvgl
 
-# Relax format check for LVGL to avoid errors on prinf() use
+-include ./lvgl/lvgl.mk
 
-CFLAGS += -Wno-format
+ifneq ($(CONFIG_LV_ASSERT_HANDLER_INCLUDE), "")
+CFLAGS += "-DLV_ASSERT_HANDLER=ASSERT(0);"
+endif
 
-# LVGL Libraries
+ifeq ($(and $(CONFIG_LV_USE_PERF_MONITOR),$(CONFIG_SCHED_CPULOAD)),y)
+CFLAGS += "-DLV_SYSMON_GET_IDLE=lv_nuttx_get_idle"
+endif
 
--include ./lvgl/src/lv_core/lv_core.mk
--include ./lvgl/src/lv_hal/lv_hal.mk
--include ./lvgl/src/lv_widgets/lv_widgets.mk
--include ./lvgl/src/lv_font/lv_font.mk
--include ./lvgl/src/lv_misc/lv_misc.mk
--include ./lvgl/src/lv_themes/lv_themes.mk
--include ./lvgl/src/lv_draw/lv_draw.mk
--include ./lvgl/src/lv_gpu/lv_gpu.mk
+ifeq ($(and $(CONFIG_SCHED_INSTRUMENTATION),$(CONFIG_LV_USE_PROFILER)),y)
+CFLAGS += "-DLV_PROFILER_BEGIN=sched_note_beginex(NOTE_TAG_GRAPHICS, __func__)"
+CFLAGS += "-DLV_PROFILER_END=sched_note_endex(NOTE_TAG_GRAPHICS, __func__)"
 
-CSRCS += lv_tick_interface.c
+CFLAGS += "-DLV_PROFILER_BEGIN_TAG(str)=sched_note_beginex(NOTE_TAG_GRAPHICS, str)"
+CFLAGS += "-DLV_PROFILER_END_TAG(str)=sched_note_endex(NOTE_TAG_GRAPHICS, str)"
+endif
 
-ifneq ($(CONFIG_USE_LV_FILESYSTEM),)
-CSRCS += lv_fs_interface.c
+ifneq ($(CONFIG_LV_OPTLEVEL), "")
+# Since multiple options need to be supported, subst needs to be used here to remove
+# the redundant double quotes, otherwise it will cause command parsing errors.
+CFLAGS   += $(subst ",, $(CONFIG_LV_OPTLEVEL))
+CXXFLAGS += $(subst ",, $(CONFIG_LV_OPTLEVEL))
 endif
 
 # Set up build configuration and environment
 
 WD := ${shell echo $(CURDIR) | sed -e 's/ /\\ /g'}
 
-CONFIG_GRAPH_LVGL_URL ?= "https://github.com/lvgl/lvgl/archive"
+CONFIG_GRAPH_LVGL_URL ?= "https://github.com/lvgl/lvgl/archive/refs/tags"
 
-LVGL_VERSION = $(patsubst "%",%,$(strip $(CONFIG_LVGL_VERSION)))
+LVGL_VERSION = 9.2.1
 LVGL_TARBALL = v$(LVGL_VERSION).zip
 
 LVGL_UNPACKNAME = lvgl
-UNPACK ?= unzip -o
+UNPACK ?= unzip -o $(if $(V),,-q)
+CURL ?= curl -L -O $(if $(V),,-Ss)
 
 LVGL_UNPACKDIR =  $(WD)/$(LVGL_UNPACKNAME)
 
 $(LVGL_TARBALL):
-	$(Q) echo "Downloading: $(LVGL_TARBALL)"
-	$(Q) curl -O -L $(CONFIG_GRAPH_LVGL_URL)/$(LVGL_TARBALL)
+	$(ECHO_BEGIN)"Downloading: $(LVGL_TARBALL)"
+	$(Q) $(CURL) $(CONFIG_GRAPH_LVGL_URL)/$(LVGL_TARBALL)
+	$(ECHO_END)
 
 $(LVGL_UNPACKNAME): $(LVGL_TARBALL)
-	$(Q) echo "Unpacking: $(LVGL_TARBALL) -> $(LVGL_UNPACKNAME)"
+	$(ECHO_BEGIN)"Unpacking: $(LVGL_TARBALL) -> $(LVGL_UNPACKNAME)"
 	$(Q) $(UNPACK) $(LVGL_TARBALL)
 	$(Q) mv	lvgl-$(LVGL_VERSION) $(LVGL_UNPACKNAME)
 	$(Q) touch $(LVGL_UNPACKNAME)
+	$(ECHO_END)
 
+# Download and unpack tarball if no git repo found
+ifeq ($(wildcard $(LVGL_UNPACKNAME)/.git),)
 context:: $(LVGL_UNPACKNAME)
+endif
 
+include $(APPDIR)/Application.mk
+
+ifeq ($(wildcard $(LVGL_UNPACKNAME)/.git),)
 distclean::
 	$(call DELDIR, $(LVGL_UNPACKNAME))
 	$(call DELFILE, $(LVGL_TARBALL))
-
-include $(APPDIR)/Application.mk
+endif

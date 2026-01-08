@@ -1,6 +1,8 @@
 ############################################################################
 # apps/examples/pwfb/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -23,7 +25,7 @@ include $(APPDIR)/Make.defs
 # NuttX per-window frame buffer graphics example.
 
 NXGLYPHS = $(APPDIR)$(DELIM)graphics$(DELIM)nxglyphs
-CFLAGS += ${shell $(INCDIR) "$(CC)" "$(NXGLYPHS)$(DELIM)include"}
+CFLAGS += ${INCDIR_PREFIX}"$(NXGLYPHS)$(DELIM)include"
 
 CSRCS = pwfb_events.c pwfb_motion.c
 MAINSRC = pwfb_main.c

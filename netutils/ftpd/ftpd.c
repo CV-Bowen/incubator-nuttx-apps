@@ -1,14 +1,11 @@
 /****************************************************************************
  * apps/netutils/ftpd/ftpd.c
  *
- *   Copyright (C) 2012, 2015, 2020 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * Includes original code as well as logic adapted from hwport_ftpd, written
- * by Jaehyuk Cho <minzkn@minzkn.com> which is released under a BSD license.
- *
- *   Copyright (C) hwport.com. All rights reserved.
- *   Author: Jaehyuk Cho <mailto:minzkn@minzkn.com>
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2012, 2015, 2020 Gregory Nutt.
+ * SPDX-FileCopyrightText: hwport.com. All rights reserved.
+ * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
+ * SPDX-FileContributor: Jaehyuk Cho <mailto:minzkn@minzkn.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -64,7 +61,9 @@
 
 #include <arpa/inet.h>
 
-#include "fsutils/passwd.h"
+#ifdef CONFIG_FTPD_LOGIN_PASSWD
+#  include "fsutils/passwd.h"
+#endif
 
 #include "netutils/ftpd.h"
 
@@ -108,7 +107,8 @@ static int ftpd_accept(int sd, FAR void *addr, FAR socklen_t *addrlen,
 static ssize_t ftpd_recv(int sd, FAR void *data, size_t size, int timeout);
 static ssize_t ftpd_send(int sd, FAR const void *data, size_t size,
                          int timeout);
-static ssize_t ftpd_response(int sd, int timeout, FAR const char *fmt, ...);
+static ssize_t ftpd_response(int sd, int timeout, FAR const char *fmt, ...)
+               printf_like(3, 4);
 
 static int ftpd_dataopen(FAR struct ftpd_session_s *session);
 static int ftpd_dataclose(FAR struct ftpd_session_s *session);
@@ -314,7 +314,7 @@ static FAR struct ftpd_account_s *ftpd_account_new(FAR const char *user,
   if (user != NULL)
     {
       ret->user = (FAR char *)&ret[1];
-      strcpy(ret->user, user);
+      strlcpy(ret->user, user, usersize);
     }
 
   return ret;
@@ -484,7 +484,7 @@ ftpd_account_search_user(FAR struct ftpd_session_s *session,
                          FAR const char *user)
 {
   FAR struct ftpd_account_s *newaccount = NULL;
-  FAR struct ftpd_account_s *account;
+  FAR const struct ftpd_account_s *account;
   uint8_t accountflags;
 
   account = session->head;
@@ -912,7 +912,7 @@ static int ftpd_accept(int sd, FAR void *addr, FAR socklen_t *addrlen,
 
   /* Accept the connection -- waiting if necessary */
 
-  acceptsd = accept(sd, (FAR struct sockaddr *)addr, addrlen);
+  acceptsd = accept4(sd, (FAR struct sockaddr *)addr, addrlen, SOCK_CLOEXEC);
   if (acceptsd < 0)
     {
       int errval = errno;
@@ -987,7 +987,7 @@ static ssize_t ftpd_send(int sd, FAR const void *data, size_t size,
   ret = send(sd, data, size, 0);
   if (ret < 0)
     {
-      ssize_t errval = errno;
+      int errval = errno;
       nerr("ERROR: send() failed: %d\n", errval);
       return -errval;
     }
@@ -1004,12 +1004,13 @@ static ssize_t ftpd_response(int sd, int timeout, FAR const char *fmt, ...)
   FAR char *buffer;
   ssize_t bytessent;
   va_list ap;
+  int ret;
 
   va_start(ap, fmt);
-  vasprintf(&buffer, fmt, ap);
+  ret = vasprintf(&buffer, fmt, ap);
   va_end(ap);
 
-  if (buffer == NULL)
+  if (ret < 0)
     {
       return -ENOMEM;
     }
@@ -1379,8 +1380,9 @@ static FAR char *ftpd_node2path(FAR struct ftpd_pathnode_s *node,
   FAR struct ftpd_pathnode_s *node1;
   FAR struct ftpd_pathnode_s *node2;
   FAR char *path;
-  FAR size_t allocsize;
-  FAR size_t namelen;
+  size_t allocsize;
+  size_t namelen;
+  size_t next;
 
   if (node == NULL)
     {
@@ -1420,7 +1422,7 @@ static FAR char *ftpd_node2path(FAR struct ftpd_pathnode_s *node,
             }
           else
             {
-              allocsize += namelen +1;
+              allocsize += namelen + 1;
             }
         }
       else
@@ -1437,7 +1439,7 @@ static FAR char *ftpd_node2path(FAR struct ftpd_pathnode_s *node,
       return NULL;
     }
 
-  allocsize = 0;
+  next = 0;
   node1 = node;
   while (node1 != NULL)
     {
@@ -1467,19 +1469,20 @@ static FAR char *ftpd_node2path(FAR struct ftpd_pathnode_s *node,
         {
           if (namelen <= 0)
             {
-              allocsize += sprintf(&path[allocsize], "/");
+              snprintf(&path[next], allocsize - next, "/");
             }
           else
             {
-              allocsize += sprintf(&path[allocsize], "%s", node1->name);
+              snprintf(&path[next], allocsize - next, "%s", node1->name);
             }
         }
       else
         {
-          allocsize += sprintf(&path[allocsize], "%s%s", node1->name, "/");
+          snprintf(&path[next], allocsize - next, "%s%s", node1->name, "/");
         }
 
       node1 = node1->flink;
+      next += strlen(&path[next]);
     }
 
   return path;
@@ -1656,24 +1659,20 @@ static int ftpd_changedir(FAR struct ftpd_session_s *session,
   ret = stat(abspath, &st);
   if (ret < 0)
     {
-      ret = -errno;
-
       free(workpath);
       free(abspath);
-      ftpd_response(session->cmd.sd, session->txtimeout,
-                    g_respfmt2, 550, ' ', rempath,
-                    ": No such file or directory");
-      return ret;
+      return ftpd_response(session->cmd.sd, session->txtimeout,
+                           g_respfmt2, 550, ' ', rempath,
+                           ": No such file or directory");
     }
 
   if (S_ISDIR(st.st_mode) == 0)
     {
       free(workpath);
       free(abspath);
-      ftpd_response(session->cmd.sd, session->txtimeout,
-                    g_respfmt2, 550, ' ', rempath,
-                    ": No such file or directory");
-      return -ENOTDIR;
+      return ftpd_response(session->cmd.sd, session->txtimeout,
+                           g_respfmt2, 550, ' ', rempath,
+                           ": No such file or directory");
     }
 
   free(abspath);
@@ -1771,7 +1770,6 @@ static int ftpd_stream(FAR struct ftpd_session_s *session, int cmdtype)
   size_t wantsize;
   ssize_t rdbytes;
   ssize_t wrbytes;
-  off_t pos = 0;
   int errval = 0;
   int ret;
 
@@ -1812,9 +1810,6 @@ static int ftpd_stream(FAR struct ftpd_session_s *session, int cmdtype)
 
 #if defined(O_LARGEFILE)
   oflags |= O_LARGEFILE;
-#endif
-#if defined(O_BINARY)
-  oflags |= O_BINARY;
 #endif
 
   /* Are we creating the file? */
@@ -1903,8 +1898,6 @@ static int ftpd_stream(FAR struct ftpd_session_s *session, int cmdtype)
           ret = -errval;
           goto errout_with_session;
         }
-
-      pos += (off_t)seekoffs;
     }
 
   /* Send success message */
@@ -1962,7 +1955,7 @@ static int ftpd_stream(FAR struct ftpd_session_s *session, int cmdtype)
 
       if (rdbytes < 0)
         {
-          nerr("ERROR: Read failed: rdbytes=%d errval=%d\n",
+          nerr("ERROR: Read failed: rdbytes=%zu errval=%d\n",
                rdbytes, errval);
           ftpd_response(session->cmd.sd, session->txtimeout,
                         g_respfmt1, 550, ' ', "Data read error !");
@@ -2060,17 +2053,13 @@ static int ftpd_stream(FAR struct ftpd_session_s *session, int cmdtype)
 
       if (wrbytes != ((ssize_t)buflen))
         {
-          nerr("ERROR: Write failed: wrbytes=%d errval=%d\n",
+          nerr("ERROR: Write failed: wrbytes=%zu errval=%d\n",
                wrbytes, errval);
           ftpd_response(session->cmd.sd, session->txtimeout,
                         g_respfmt1, 550, ' ', "Data send error !");
-           ret = -errval;
-           break;
+          ret = -errval;
+          break;
         }
-
-      /* Get the next file offset */
-
-      pos += (off_t)wrbytes;
     }
 
 errout_with_session:;
@@ -2157,6 +2146,8 @@ static int ftpd_listbuffer(FAR struct ftpd_session_s *session,
                            FAR struct stat *st, FAR char *buffer,
                            size_t buflen, unsigned int opton)
 {
+  UNUSED(session);
+
   FAR char *name;
   size_t offset = 0;
 
@@ -2426,8 +2417,8 @@ static int fptd_listscan(FAR struct ftpd_session_s *session, FAR char *path,
             }
         }
 
-      asprintf(&temp, "%s/%s", path, entry->d_name);
-      if (temp == NULL)
+      ret = asprintf(&temp, "%s/%s", path, entry->d_name);
+      if (ret < 0)
         {
           continue;
         }
@@ -4098,6 +4089,8 @@ static void ftpd_freesession(FAR struct ftpd_session_s *session)
 
 static void ftpd_workersetup(FAR struct ftpd_session_s *session)
 {
+  UNUSED(session);
+
 #if defined(CONFIG_NET_HAVE_IPTOS) || defined(CONFIG_NET_HAVE_OOBINLINE)
   int temp;
 #endif
@@ -4145,7 +4138,7 @@ static FAR void *ftpd_worker(FAR void *arg)
   /* Send the welcoming message */
 
   ret = ftpd_response(session->cmd.sd, session->txtimeout,
-                          g_respfmt1, 220, ' ', CONFIG_FTPD_SERVERID);
+                      g_respfmt1, 220, ' ', CONFIG_FTPD_SERVERID);
   if (ret < 0)
     {
       nerr("ERROR: ftpd_response() failed: %d\n", ret);
@@ -4262,7 +4255,9 @@ static FAR void *ftpd_worker(FAR void *arg)
  *   used to run the server.
  *
  * Input Parameters:
- *    None
+ *    port - The port that the server will listen to.
+ *    family - The type of INET family to use when opening the socket.
+ *    AF_INET and AF_INET6 are supported.
  *
  * Returned Value:
  *   On success, a non-NULL handle is returned that can be used to reference
@@ -4270,15 +4265,11 @@ static FAR void *ftpd_worker(FAR void *arg)
  *
  ****************************************************************************/
 
-FTPD_SESSION ftpd_open(sa_family_t family)
+FTPD_SESSION ftpd_open(int port, sa_family_t family)
 {
   FAR struct ftpd_server_s *server;
 
-  server = ftpd_openserver(21, family);
-  if (server == NULL)
-    {
-      server = ftpd_openserver(2211, family);
-    }
+  server = ftpd_openserver(port, family);
 
   return (FTPD_SESSION)server;
 }

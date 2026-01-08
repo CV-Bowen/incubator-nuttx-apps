@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/graphics/nxwidgets/include/cimage.cxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -254,7 +256,7 @@ void CImage::drawContents(CGraphicsPort *port, bool selected)
           if (!m_bitmap->getRun(0, srcRow, nLeftPixels, &buffer[m_origin.x]))
             {
               ginfo("IBitmap::getRun failed at image row %d\n", srcRow);
-              delete buffer;
+              delete[] buffer;
               return;
             }
 
@@ -325,7 +327,7 @@ void CImage::drawContents(CGraphicsPort *port, bool selected)
         }
     }
 
-   delete buffer;
+   delete[] buffer;
 }
 
 /**

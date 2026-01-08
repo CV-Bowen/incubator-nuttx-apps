@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/graphics/NxWidgets/nxwm/src/cinput.cxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -24,14 +26,14 @@
 
 #include <nuttx/config.h>
 
-#include <cunistd>
 #include <cerrno>
-#include <cfcntl>
 
+#include <fcntl.h>
 #include <sched.h>
 #include <poll.h>
 #include <pthread.h>
 #include <assert.h>
+#include <unistd.h>
 
 #include <nuttx/semaphore.h>
 #include <nuttx/nx/nxglib.h>
@@ -97,7 +99,6 @@ CInput::CInput(CTwm4Nx *twm4nx)
   // Initialize the semaphore used to synchronize with the listener thread
 
   sem_init(&m_waitSem, 0, 0);
-  sem_setprotocol(&m_waitSem, SEM_PRIO_NONE);
 
 #ifdef CONFIG_TWM4NX_TOUCHSCREEN
   // Calibration
@@ -127,7 +128,7 @@ CInput::~CInput(void)
 
   if (m_kbdFd >= 0)
     {
-      std::close(m_kbdFd);
+      close(m_kbdFd);
     }
 #endif
 
@@ -136,7 +137,7 @@ CInput::~CInput(void)
 
   if (m_mouseFd >= 0)
     {
-      std::close(m_mouseFd);
+      close(m_mouseFd);
     }
 #endif
 }
@@ -220,7 +221,7 @@ int CInput::keyboardOpen(void)
     {
       // Try to open the keyboard device non-blocking.
 
-      fd = std::open(CONFIG_TWM4NX_KEYBOARD_DEVPATH, O_RDONLY | O_NONBLOCK);
+      fd = open(CONFIG_TWM4NX_KEYBOARD_DEVPATH, O_RDONLY | O_NONBLOCK);
       if (fd < 0)
         {
           int errcode = errno;
@@ -246,7 +247,7 @@ int CInput::keyboardOpen(void)
                   // Sleep a bit and try again
 
                   twminfo("WAITING for a USB keyboard\n");
-                  std::sleep(2);
+                  sleep(2);
                 }
 
               // Anything else would be really bad.
@@ -296,7 +297,7 @@ inline int CInput::mouseOpen(void)
     {
       // Try to open the mouse device non-blocking
 
-      fd = std::open(CONFIG_TWM4NX_MOUSE_DEVPATH, O_RDONLY | O_NONBLOCK);
+      fd = open(CONFIG_TWM4NX_MOUSE_DEVPATH, O_RDONLY | O_NONBLOCK);
       if (fd < 0)
         {
           int errcode = errno;
@@ -322,7 +323,7 @@ inline int CInput::mouseOpen(void)
                   // Sleep a bit and try again
 
                   twminfo("WAITING for a USB mouse\n");
-                  std::sleep(2);
+                  sleep(2);
                 }
 
               // Anything else would be really bad.
@@ -785,12 +786,12 @@ int CInput::session(void)
       struct pollfd pfd[NINPUT_DEVICES];
 #ifndef CONFIG_TWM4NX_NOKEYBOARD
       pfd[KBD_INDEX].fd        = m_kbdFd;
-      pfd[KBD_INDEX].events    = POLLIN | POLLERR | POLLHUP;
+      pfd[KBD_INDEX].events    = POLLIN;
       pfd[KBD_INDEX].revents   = 0;
 #endif
 #ifndef CONFIG_TWM4NX_NOMOUSE
       pfd[MOUSE_INDEX].fd      = m_mouseFd;
-      pfd[MOUSE_INDEX].events  = POLLIN | POLLERR | POLLHUP;
+      pfd[MOUSE_INDEX].events  = POLLIN;
       pfd[MOUSE_INDEX].revents = 0;
 #endif
 
@@ -817,7 +818,7 @@ int CInput::session(void)
 
       if ((pfd[KBD_INDEX].revents & (POLLERR | POLLHUP)) != 0)
         {
-          twmerr("ERROR: keyboard poll() failed. revents=%04x\n",
+          twmerr("ERROR: keyboard poll() failed. revents=%08" PRIx32 "\n",
                  pfd[KBD_INDEX].revents);
           ret = -EIO;
           break;
@@ -839,7 +840,7 @@ int CInput::session(void)
 
       if ((pfd[MOUSE_INDEX].revents & (POLLERR | POLLHUP)) != 0)
         {
-          twmerr("ERROR: Mouse poll() failed. revents=%04x\n",
+          twmerr("ERROR: Mouse poll() failed. revents=%08" PRIx32 "\n",
                  pfd[MOUSE_INDEX].revents);
           ret = -EIO;
           break;
@@ -956,14 +957,14 @@ FAR void *CInput::listener(FAR void *arg)
 #ifndef CONFIG_TWM4NX_NOKEYBOARD
       // Close the keyboard device
 
-      std::close(This->m_kbdFd);
+      close(This->m_kbdFd);
       This->m_kbdFd = -1;
 #endif
 
 #ifndef CONFIG_TWM4NX_NOMOUSE
       // Close the mouse device
 
-      std::close(This->m_mouseFd);
+      close(This->m_mouseFd);
       This->m_mouseFd = -1;
 #endif
     }

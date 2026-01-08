@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/discover/discover_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,7 +33,6 @@
 
 #include <net/if.h>
 #include <netinet/in.h>
-#include <nuttx/net/arp.h>
 
 #include "netutils/netlib.h"
 #include "netutils/discover.h"
@@ -136,6 +137,9 @@ int main(int argc, FAR char *argv[])
   if (handle)
     {
       struct dhcpc_state ds;
+      char inetaddr[INET_ADDRSTRLEN];
+      int ret;
+
       dhcpc_request(handle, &ds);
       netlib_set_ipv4addr("eth0", &ds.ipaddr);
 
@@ -149,13 +153,21 @@ int main(int argc, FAR char *argv[])
           netlib_set_dripv4addr("eth0", &ds.default_router);
         }
 
-      if (ds.dnsaddr.s_addr != 0)
+      for (int i = 0; i < ds.num_dnsaddr; i++)
         {
-          netlib_set_ipv4dnsaddr(&ds.dnsaddr);
+          if (ds.dnsaddr[i].s_addr != 0)
+            {
+              ret = netlib_set_ipv4dnsaddr(&ds.dnsaddr[i]);
+              if (ret < 0)
+                {
+                  nerr("ERROR: Set DNS server %d:%s address failed: %d\n",
+                        i, inet_ntoa(ds.dnsaddr[i]), ret);
+                }
+            }
         }
 
       dhcpc_close(handle);
-      printf("IP: %s\n", inet_ntoa(ds.ipaddr));
+      printf("IP: %s\n", inet_ntoa_r(ds.ipaddr, inetaddr, sizeof(inetaddr)));
     }
 
 #endif /* CONFIG_EXAMPLES_DISCOVER_DHCPC */

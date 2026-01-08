@@ -1,6 +1,8 @@
 ############################################################################
 # apps/canutils/candump/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -28,7 +30,7 @@ PRIORITY = SCHED_PRIORITY_DEFAULT
 STACKSIZE = $(CONFIG_CANUTILS_CANDUMP_STACKSIZE)
 MODULE = $(CONFIG_CANUTILS_CANDUMP)
 
-CFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/canutils/libcanutils}
+CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/canutils/libcanutils
 MAINSRC = candump.c
 
 include $(APPDIR)/Application.mk

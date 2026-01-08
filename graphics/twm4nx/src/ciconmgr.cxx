@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/graphics/twm4nx/src/ciconmgr.cxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -730,7 +732,7 @@ void CIconMgr::insertEntry(FAR struct SWindowEntry *wentry,
       // Insert the new window mid-list, in name order
 
       NXWidgets::CNxString windowName = cwin->getWindowName();
-      if (windowName.compareTo( tmpwin->cwin->getWindowName()) > 0)
+      if (windowName.compareTo(tmpwin->cwin->getWindowName()) > 0)
         {
           wentry->flink = tmpwin;
           wentry->blink = tmpwin->blink;

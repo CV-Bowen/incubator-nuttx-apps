@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/foc/foc_intf.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -28,6 +30,7 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include <sys/ioctl.h>
 
@@ -70,7 +73,7 @@
 #endif
 
 /****************************************************************************
- * Private Type Definition
+ * Private Types
  ****************************************************************************/
 
 #ifdef CONFIG_EXAMPLES_FOC_HAVE_BUTTON
@@ -588,7 +591,7 @@ int foc_intf_init(void)
 #endif
 
 #ifdef FOC_HAVE_INTF
-  errout:
+errout:
 #endif
 
   return ret;
@@ -636,7 +639,7 @@ int foc_intf_deinit(void)
 #endif
 
 #ifdef FOC_HAVE_INTF
-  errout:
+errout:
 #endif
 
   return ret;
@@ -686,7 +689,7 @@ int foc_intf_update(FAR struct foc_intf_data_s *data)
 #endif
 
 #ifdef FOC_HAVE_INTF
-  errout:
+errout:
 #endif
 
   return ret;

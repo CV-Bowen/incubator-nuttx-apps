@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/include/graphics/nxwm/nxwmconfig.hxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -79,8 +81,8 @@
  * exit.
  */
 
-#ifndef CONFIG_SCHED_ONEXIT
-#  warning "on_exit() support may be needed (CONFIG_SCHED_ONEXIT)"
+#if CONFIG_LIBC_MAX_EXITFUNS == 0
+#  warning "on_exit() support may be needed (CONFIG_LIBC_MAX_EXITFUNS)"
 #endif
 
 /**
@@ -423,7 +425,7 @@
 #endif
 
 #ifndef CONFIG_NXWM_TOUCHSCREEN_SIGNO
-#  define CONFIG_NXWM_TOUCHSCREEN_SIGNO 5
+#  define CONFIG_NXWM_TOUCHSCREEN_SIGNO 32
 #endif
 
 #ifndef CONFIG_NXWM_TOUCHSCREEN_LISTENERPRIO
@@ -459,7 +461,7 @@
 #endif
 
 #ifndef CONFIG_NXWM_KEYBOARD_SIGNO
-#  define CONFIG_NXWM_KEYBOARD_SIGNO 6
+#  define CONFIG_NXWM_KEYBOARD_SIGNO 33
 #endif
 
 #ifndef CONFIG_NXWM_KEYBOARD_BUFSIZE
@@ -532,7 +534,7 @@
 #endif
 
 #ifndef CONFIG_NXWM_CALIBRATION_SIGNO
-#  define CONFIG_NXWM_CALIBRATION_SIGNO 5
+#  define CONFIG_NXWM_CALIBRATION_SIGNO 32
 #endif
 
 #ifndef CONFIG_NXWM_CALIBRATION_LISTENERPRIO

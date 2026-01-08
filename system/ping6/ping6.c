@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/system/ping6/ping6.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -98,6 +100,7 @@ static void show_usage(FAR const char *progname, int exitcode)
   printf("  -s <size> specifies the number of data bytes to be sent. "
          " Default %u.\n",
          ICMPv6_PING6_DATALEN);
+  printf("  -I <interface> is the bind device for traffic\n");
   printf("  -h shows this text and exits.\n");
   exit(exitcode);
 }
@@ -174,6 +177,12 @@ static void ping6_result(FAR const struct ping6_result_s *result)
                 result->extra, result->id);
         break;
 
+#ifdef CONFIG_NET_BINDTODEVICE
+      case ICMPV6_E_BINDDEV:
+        fprintf(stderr, "ERROR: setsockopt error: %ld\n", result->extra);
+        break;
+#endif
+
       case ICMPv6_W_SEQNOBIG:
         fprintf(stderr,
                 "WARNING: Ignoring ICMP reply to sequence %ld.  "
@@ -239,10 +248,17 @@ static void ping6_result(FAR const struct ping6_result_s *result)
                    result->extra / USEC_PER_MSEC);
             if (result->nreplies > 0)
               {
-                long avg = priv->tsum / result->nreplies;
-                long long tempnum = priv->tsum2 / result->nreplies -
-                                    (long long)avg * avg;
-                long tmdev = ub16toi(ub32sqrtub16(uitoub32(tempnum)));
+                long avg = 0;
+                long long tempnum = 0;
+                long tmdev = 0;
+
+                if (priv->tsum > 0)
+                  {
+                    avg = priv->tsum / result->nreplies;
+                    tempnum = priv->tsum2 / result->nreplies -
+                              (long long)avg * avg;
+                    tmdev = ub16toi(ub32sqrtub16(uitoub32(tempnum)));
+                  }
 
                 printf("rtt min/avg/max/mdev = %ld.%03ld/%ld.%03ld/"
                        "%ld.%03ld/%ld.%03ld ms\n",
@@ -286,7 +302,7 @@ int main(int argc, FAR char *argv[])
 
   exitcode = EXIT_FAILURE;
 
-  while ((option = getopt(argc, argv, ":c:i:W:s:h")) != ERROR)
+  while ((option = getopt(argc, argv, ":c:i:W:s:I:h")) != ERROR)
     {
       switch (option)
         {
@@ -344,6 +360,14 @@ int main(int argc, FAR char *argv[])
 
               info.datalen = (uint16_t)datalen;
             }
+            break;
+
+            case 'I':
+#ifdef CONFIG_NET_BINDTODEVICE
+            info.devname = optarg;
+#else
+            fprintf(stderr, "ERROR: Bind to device not supported\n");
+#endif
             break;
 
           case 'h':

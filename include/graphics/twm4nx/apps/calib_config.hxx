@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/include/graphics/twm4nx/apps/calib_config.hxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -114,7 +116,7 @@
 #endif
 
 #ifndef CONFIG_TWM4NX_CALIBRATION_SIGNO
-#  define CONFIG_TWM4NX_CALIBRATION_SIGNO 5
+#  define CONFIG_TWM4NX_CALIBRATION_SIGNO 32
 #endif
 
 #ifndef CONFIG_TWM4NX_CALIBRATION_LISTENERPRIO

@@ -1,6 +1,8 @@
 ############################################################################
 # apps/wireless/bluetooth/btsak/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -20,7 +22,7 @@
 
 include $(APPDIR)/Make.defs
 
-# Bluetooth SAK (swiss army knife )
+# Bluetooth SAK (swiss army knife)
 
 CSRCS   = btsak_advertise.c btsak_features.c btsak_gatt.c btsak_info.c
 CSRCS  += btsak_scan.c btsak_security.c

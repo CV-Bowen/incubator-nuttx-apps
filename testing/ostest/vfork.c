@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/testing/ostest/vfork.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -24,15 +26,16 @@
 
 #include <nuttx/config.h>
 
+#include <assert.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <errno.h>
 
 #include "ostest.h"
 
-#if defined(CONFIG_ARCH_HAVE_VFORK) && defined(CONFIG_SCHED_WAITPID)
+#if defined(CONFIG_ARCH_HAVE_FORK) && defined(CONFIG_SCHED_WAITPID)
 
 /****************************************************************************
  * Private Data
@@ -61,7 +64,8 @@ int vfork_test(void)
     }
   else if (pid < 0)
     {
-      printf("vfork_test: vfork() failed: %d\n", errno);
+      printf("vfork_test: ERROR vfork() failed: %d\n", errno);
+      ASSERT(false);
       return -1;
     }
   else
@@ -74,6 +78,7 @@ int vfork_test(void)
       else
         {
           printf("vfork_test: ERROR Child %d did not run\n", pid);
+          ASSERT(false);
           return -1;
         }
     }
@@ -81,4 +86,4 @@ int vfork_test(void)
   return 0;
 }
 
-#endif /* CONFIG_ARCH_HAVE_VFORK && CONFIG_SCHED_WAITPID */
+#endif /* CONFIG_ARCH_HAVE_FORK && CONFIG_SCHED_WAITPID */

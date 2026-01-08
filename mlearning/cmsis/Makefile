@@ -1,6 +1,8 @@
 ############################################################################
 # apps/mlearning/cmsis/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -26,10 +28,13 @@ cmsis.zip:
 	$(Q) mv CMSIS_5-$(CONFIG_CMSIS_VER) CMSIS_5
 	$(Q) patch -p0 < cmsis-nn-support_nnabla.patch
 
+# Download and unpack tarball if no git repo found
+ifeq ($(wildcard CMSIS_5/.git),)
 context:: cmsis.zip
 
 distclean::
 	$(call DELDIR, CMSIS_5)
 	$(call DELFILE, cmsis.zip)
+endif
 
 include $(APPDIR)/Application.mk

@@ -1,13 +1,10 @@
 /****************************************************************************
  * apps/wireless/wapi/src/util.c
  *
- *   Copyright (C) 2011, 2017Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * Adapted for NuttX from WAPI:
- *
- *   Copyright (c) 2010, Volkan YAZICI <volkan.yazici@gmail.com>
- *   All rights reserved.
+ * SPDX-License-Identifier: BSD-2-Clause
+ * SPDX-FileCopyrightText: 2011, 2017 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2010 Volkan YAZICI <volkan.yazici@gmail.com>
+ * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,12 +86,13 @@ static FAR void *wapi_json_load(FAR const char *confname)
       return NULL;
     }
 
-  buf = malloc(sb.st_size);
+  buf = malloc(sb.st_size + 1);
   if (!buf)
     {
       goto errout;
     }
 
+  buf[sb.st_size] = '\0';
   fd = open(confname, O_RDONLY);
   if (fd < 0)
     {
@@ -114,7 +112,7 @@ errout:
       free(buf);
     }
 
-  if (fd > 0)
+  if (fd >= 0)
     {
       close(fd);
     }
@@ -148,7 +146,7 @@ static bool wapi_json_update(FAR cJSON *root,
           int len = strlen(obj->valuestring);
           if (len > 0)
             {
-              if (!strncmp(value, obj->valuestring, len))
+              if (!strcmp(value, obj->valuestring))
                 {
                   return false;
                 }
@@ -190,7 +188,8 @@ static bool wapi_json_update(FAR cJSON *root,
 
 int wapi_make_socket(void)
 {
-  return socket(NET_SOCK_FAMILY, NET_SOCK_TYPE, NET_SOCK_PROTOCOL);
+  int fd = socket(NET_SOCK_FAMILY, NET_SOCK_TYPE, NET_SOCK_PROTOCOL);
+  return fd < 0 ? -errno : fd;
 }
 
 /****************************************************************************
@@ -241,6 +240,9 @@ FAR const char *wapi_ioctl_command_name(int cmd)
     case SIOCGIWTXPOW:
       return "SIOCGIWTXPOW";
 
+    case SIOCGIWPTAPRIO:
+      return "SIOCGIWPTAPRIO";
+
     case SIOCSIFADDR:
       return "SIOCSIFADDR";
 
@@ -256,6 +258,9 @@ FAR const char *wapi_ioctl_command_name(int cmd)
     case SIOCSIWMODE:
       return "SIOCSIWMODE";
 
+    case SIOCGIWSENS:
+      return "SIOCGIWSENS";
+
     case SIOCSIWRATE:
       return "SIOCSIWRATE";
 
@@ -264,6 +269,15 @@ FAR const char *wapi_ioctl_command_name(int cmd)
 
     case SIOCSIWTXPOW:
       return "SIOCSIWTXPOW";
+
+    case SIOCSIWPTAPRIO:
+      return "SIOCSIWPTAPRIO";
+
+    case SIOCSIWPMKSA:
+      return "SIOCSIWPMKSA";
+
+    case SIOCGIWPMKSA:
+      return "SIOCGIWPMKSA";
 
     default:
       snprintf(g_ioctl_command_namebuf, WAPI_IOCTL_COMMAND_NAMEBUFSIZ,
@@ -432,13 +446,13 @@ int wapi_save_config(FAR const char *ifname,
   FAR char *buf = NULL;
   FAR cJSON *ifobj;
   FAR cJSON *root;
-  int ret = -1;
+  int ret = -ENOMEM;
   int fd = -1;
   bool update;
 
   if (ifname == NULL || conf == NULL)
     {
-      return ret;
+      return -EINVAL;
     }
 
   if (confname == NULL)
@@ -495,13 +509,18 @@ int wapi_save_config(FAR const char *ifname,
       goto errout;
     }
 
-  fd = open(confname, O_RDWR | O_CREAT | O_TRUNC);
+  fd = open(confname, O_RDWR | O_CREAT | O_TRUNC, 0644);
   if (fd < 0)
     {
+      ret = -errno;
       goto errout;
     }
 
   ret = write(fd, buf, strlen(buf));
+  if (ret < 0)
+    {
+      ret = -errno;
+    }
 
 errout:
   if (buf)
@@ -509,7 +528,7 @@ errout:
       free(buf);
     }
 
-  if (fd > 0)
+  if (fd >= 0)
     {
       close(fd);
     }

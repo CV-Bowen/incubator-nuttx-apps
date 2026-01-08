@@ -1,6 +1,8 @@
 ############################################################################
 # apps/examples/ina219/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -20,14 +22,14 @@
 
 include $(APPDIR)/Make.defs
 
-# Hello, World! built-in application info
+# INA219 built-in application info
 
 PROGNAME = $(CONFIG_EXAMPLES_INA219_PROGNAME)
 PRIORITY = $(CONFIG_EXAMPLES_INA219_PRIORITY)
 STACKSIZE = $(CONFIG_EXAMPLES_INA219_STACKSIZE)
 MODULE = $(CONFIG_EXAMPLES_INA219)
 
-# Hello, World! Example
+# INA219 Example
 
 MAINSRC = ina219_main.c
 

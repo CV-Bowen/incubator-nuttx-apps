@@ -1,6 +1,8 @@
 ############################################################################
 # apps/examples/can/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -20,11 +22,11 @@
 
 include $(APPDIR)/Make.defs
 
-# NuttX NX Graphics Example.
+# Can example.
 
 MAINSRC = can_main.c
 
-# Touchscreen built-in application info
+# Can built-in application info
 
 PROGNAME = can
 PRIORITY = SCHED_PRIORITY_DEFAULT

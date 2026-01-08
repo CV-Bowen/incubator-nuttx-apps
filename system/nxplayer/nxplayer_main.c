@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/system/nxplayer/nxplayer_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -49,7 +51,7 @@
 #endif
 
 /****************************************************************************
- * Private Type Declarations
+ * Private Types
  ****************************************************************************/
 
 struct mp_cmd_s
@@ -256,7 +258,7 @@ static const int g_nxplayer_cmd_count = sizeof(g_nxplayer_cmds) /
 
 static int nxplayer_cmd_play(FAR struct nxplayer_s *pplayer, char *parg)
 {
-  int     ret;
+  int ret;
 
   /* Try to play the file specified */
 
@@ -415,7 +417,7 @@ static int nxplayer_cmd_bass(FAR struct nxplayer_s *pplayer, char *parg)
     {
       /* Get the level and range percentage value from the argument */
 
-      level_percent = (uint8_t) atoi(parg);
+      level_percent = (uint8_t)strtoul(parg, NULL, 10);
       nxplayer_setbass(pplayer, level_percent);
     }
 
@@ -445,7 +447,7 @@ static int nxplayer_cmd_treble(FAR struct nxplayer_s *pplayer, char *parg)
     {
       /* Get the level and range percentage value from the argument */
 
-      level_percent = (uint8_t) atoi(parg);
+      level_percent = (uint8_t)strtoul(parg, NULL, 10);
       nxplayer_settreble(pplayer, level_percent);
     }
 
@@ -466,17 +468,17 @@ static int nxplayer_cmd_balance(FAR struct nxplayer_s *pplayer, char *parg)
 {
   uint16_t   percent;
 
-  /* If no arg given, then print current volume */
+  /* If no arg given, then print current balance */
 
   if (parg == NULL || *parg == '\0')
     {
-      printf("balance: %d\n", pplayer->volume / 10);
+      printf("balance: %d\n", pplayer->balance / 10);
     }
   else
     {
       /* Get the percentage value from the argument */
 
-      percent = (uint16_t) (atof(parg) * 10.0);
+      percent = (uint16_t)(strtof(parg, NULL) * 10.0f);
       nxplayer_setbalance(pplayer, percent);
     }
 
@@ -737,7 +739,7 @@ static int nxplayer_cmd_help(FAR struct nxplayer_s *pplayer, char *parg)
 
 int main(int argc, FAR char *argv[])
 {
-  char                    buffer[CONFIG_NSH_LINELEN];
+  char                    buffer[LINE_MAX];
   int                     len;
   int                     x;
   int                     running;
@@ -770,10 +772,11 @@ int main(int argc, FAR char *argv[])
 
       /* Read a line from the terminal */
 
-      len = readline(buffer, sizeof(buffer), stdin, stdout);
-      buffer[len] = '\0';
+      len = readline_stream(buffer, sizeof(buffer),
+                            stdin, stdout);
       if (len > 0)
         {
+          buffer[len] = '\0';
           if (strncmp(buffer, "!", 1) != 0)
             {
               /* nxplayer command */
@@ -836,8 +839,6 @@ int main(int argc, FAR char *argv[])
     }
 
   /* Release the NxPlayer context */
-
-  /* nxplayer_detach(pplayer); */
 
   nxplayer_release(pplayer);
 

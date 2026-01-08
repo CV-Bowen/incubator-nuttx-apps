@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/graphics/nxwidgets/src/cradiobutton.cxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -96,7 +98,7 @@ CRadioButtonGroup::CRadioButtonGroup(CWidgetControl *pWidgetControl,
 : CNxWidget(pWidgetControl, x, y, 0, 0, WIDGET_BORDERLESS, style)
 {
   m_widgetControl  = pWidgetControl;
-  m_selectedWidget = (CRadioButton *)NULL;
+  m_selectedWidget = NULL;
 }
 
 /**

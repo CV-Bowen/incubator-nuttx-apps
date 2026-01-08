@@ -1,6 +1,8 @@
 ############################################################################
 # apps/interpreters/wasm3/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -21,9 +23,7 @@
 ifneq ($(CONFIG_INTERPRETERS_WASM3),)
 CONFIGURED_APPS += $(APPDIR)/interpreters/wasm3
 
-CFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" \
-    $(APPDIR)/interpreters/wasm3/wasm3/source}
-CXXFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" \
-    $(APPDIR)/interpreters/wasm3/wasm3/source}
+CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/interpreters/wasm3/wasm3/source
+CXXFLAGS += ${INCDIR_PREFIX}$(APPDIR)/interpreters/wasm3/wasm3/source
 
 endif

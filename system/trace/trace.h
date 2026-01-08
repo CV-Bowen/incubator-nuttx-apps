@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/system/trace/trace.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -38,10 +40,14 @@ extern "C"
 #endif
 
 /****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
+/****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
-#ifdef CONFIG_DRIVER_NOTERAM
+#ifdef CONFIG_DRIVERS_NOTERAM
 
 /****************************************************************************
  * Name: trace_dump
@@ -83,14 +89,14 @@ bool trace_dump_get_overwrite(void);
 
 void trace_dump_set_overwrite(bool mode);
 
-#else /* CONFIG_DRIVER_NOTERAM */
+#else /* CONFIG_DRIVERS_NOTERAM */
 
-#define trace_dump(out)
+#define trace_dump(type,out)
 #define trace_dump_clear()
 #define trace_dump_get_overwrite()      0
 #define trace_dump_set_overwrite(mode)  (void)(mode)
 
-#endif /* CONFIG_DRIVER_NOTERAM */
+#endif /* CONFIG_DRIVERS_NOTERAM */
 
 #undef EXTERN
 #ifdef __cplusplus

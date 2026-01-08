@@ -1,6 +1,8 @@
 ############################################################################
 # apps/system/trace/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -27,7 +29,7 @@ PRIORITY = $(CONFIG_SYSTEM_TRACE_PRIORITY)
 STACKSIZE = $(CONFIG_SYSTEM_TRACE_STACKSIZE)
 MODULE = $(CONFIG_SYSTEM_TRACE)
 
-ifeq ($(CONFIG_DRIVER_NOTERAM),y)
+ifeq ($(CONFIG_DRIVERS_NOTERAM),y)
   CSRCS = trace_dump.c
 endif
 

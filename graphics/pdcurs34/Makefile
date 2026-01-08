@@ -1,6 +1,8 @@
 ############################################################################
 # apps/graphics/pdcurs34/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -24,6 +26,6 @@ include $(APPDIR)/Make.defs
 include pdcurses/Make.defs
 include nuttx/Make.defs
 
-CFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/graphics/pdcurs34/include}
+CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/graphics/pdcurs34/include
 
 include $(APPDIR)/Application.mk

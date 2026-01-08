@@ -1,6 +1,8 @@
 ############################################################################
 # apps/mlearning/libnnablart/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -20,7 +22,6 @@
 
 include $(APPDIR)/Make.defs
 
-ifeq ($(CONFIG_NNABLA_RT),y)
 SRC = nnabla-c-runtime/src
 
 CSRCS   += $(SRC)/functions/utilities/accessor.c
@@ -115,12 +116,13 @@ nnabla.zip:
 	$(Q) unzip -o nnabla.zip
 	$(Q) mv nnabla-c-runtime-$(CONFIG_NNABLA_RT_VER) nnabla-c-runtime
 
+# Download and unpack tarball if no git repo found
+ifeq ($(wildcard nnabla-c-runtime/.git),)
 context:: nnabla.zip
 
 distclean::
 	$(call DELDIR, nnabla-c-runtime)
 	$(call DELFILE, nnabla.zip)
-
 endif
 
 include $(APPDIR)/Application.mk

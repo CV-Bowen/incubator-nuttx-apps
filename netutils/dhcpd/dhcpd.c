@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/dhcpd/dhcpd.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -45,8 +47,10 @@
 
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/wait.h>
 
 #include <inttypes.h>
+#include <sched.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -187,6 +191,8 @@
 #  define HAVE_LEASE_TIME 1
 #endif
 
+#define g_state  (*g_dhcpd_daemon.ds_data)
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -270,10 +276,24 @@ struct dhcpd_state_s
 
 struct dhcpd_daemon_s
 {
-  uint8_t          ds_state;        /* See enum dhcpd_daemon_e */
-  sem_t            ds_lock;         /* Used to protect the whole structure */
-  sem_t            ds_sync;         /* Used to synchronize start and stop events */
-  pid_t            ds_pid;          /* Task ID of the DHCPD daemon */
+  uint8_t                   ds_state; /* See enum dhcpd_daemon_e */
+  pid_t                     ds_pid;   /* Task ID of the DHCPD daemon */
+  FAR struct dhcpd_state_s *ds_data;  /* DHCPD daemon data */
+};
+
+struct dhcpd_config_s
+{
+  in_addr_t ds_startip;
+  in_addr_t ds_endip;
+#ifdef HAVE_ROUTERIP
+  in_addr_t ds_routerip;
+#endif
+#ifdef HAVE_NETMASK
+  in_addr_t ds_netmask;
+#endif
+#ifdef HAVE_DNSIP
+  in_addr_t ds_dnsip;
+#endif
 };
 
 /****************************************************************************
@@ -285,8 +305,6 @@ static const uint8_t        g_magiccookie[4] =
   99, 130, 83, 99
 };
 
-static struct dhcpd_state_s g_state;
-
 /* This type describes the state of the DHCPD client daemon.  Only one
  * instance of the DHCPD daemon is permitted in this implementation.  This
  * limitation is due only to this global data structure.
@@ -295,9 +313,23 @@ static struct dhcpd_state_s g_state;
 static struct dhcpd_daemon_s g_dhcpd_daemon =
 {
   DHCPD_NOT_RUNNING,
-  SEM_INITIALIZER(1),
-  SEM_INITIALIZER(0),
-  -1
+  -1,
+  NULL
+};
+
+static struct dhcpd_config_s g_dhcpd_config =
+{
+  CONFIG_NETUTILS_DHCPD_STARTIP,
+  CONFIG_NETUTILS_DHCP_OPTION_ENDIP,
+#ifdef HAVE_ROUTERIP
+  CONFIG_NETUTILS_DHCPD_ROUTERIP,
+#endif
+#ifdef HAVE_NETMASK
+  CONFIG_NETUTILS_DHCPD_NETMASK,
+#endif
+#ifdef HAVE_DNSIP
+  CONFIG_NETUTILS_DHCPD_DNSIP
+#endif
 };
 
 /****************************************************************************
@@ -308,7 +340,8 @@ static struct dhcpd_daemon_s g_dhcpd_daemon =
  * Name: dhcpd_arpupdate
  ****************************************************************************/
 
-#ifndef CONFIG_NETUTILS_DHCPD_HOST
+#ifndef CONFIG_NETUTILS_DHCPD_IGNOREBROADCAST
+#  ifndef CONFIG_NETUTILS_DHCPD_HOST
 static inline void dhcpd_arpupdate(FAR uint8_t *ipaddr, FAR uint8_t *hwaddr)
 {
   struct sockaddr_in inaddr;
@@ -323,10 +356,11 @@ static inline void dhcpd_arpupdate(FAR uint8_t *ipaddr, FAR uint8_t *hwaddr)
 
   /* Update the ARP table */
 
-  netlib_set_arpmapping(&inaddr, hwaddr);
+  netlib_set_arpmapping(&inaddr, hwaddr, NULL);
 }
-#else
-#  define dhcpd_arpupdate(ipaddr,hwaddr)
+#  else
+#    define dhcpd_arpupdate(ipaddr,hwaddr)
+#  endif
 #endif
 
 /****************************************************************************
@@ -334,7 +368,7 @@ static inline void dhcpd_arpupdate(FAR uint8_t *ipaddr, FAR uint8_t *hwaddr)
  ****************************************************************************/
 
 #ifdef CONFIG_NETUTILS_DHCPD_HOST
-# define dhcpd_time() time(0)
+#  define dhcpd_time() time(0)
 #elif defined(HAVE_LEASE_TIME)
 static time_t dhcpd_time(void)
 {
@@ -349,7 +383,7 @@ static time_t dhcpd_time(void)
   return ret;
 }
 #else
-# define dhcpd_time() (0)
+#  define dhcpd_time() (0)
 #endif
 
 /****************************************************************************
@@ -370,7 +404,7 @@ static inline bool dhcpd_leaseexpired(struct lease_s *lease)
     }
 }
 #else
-# define dhcpd_leaseexpired(lease) (false)
+#  define dhcpd_leaseexpired(lease) (false)
 #endif
 
 /****************************************************************************
@@ -384,11 +418,11 @@ struct lease_s *dhcpd_setlease(const uint8_t *mac,
    * ipaddr must be in host order!
    */
 
-  int ndx = ipaddr - CONFIG_NETUTILS_DHCPD_STARTIP;
+  int ndx = ipaddr - g_dhcpd_config.ds_startip;
   struct lease_s *ret = NULL;
 
   ninfo("ipaddr: %08" PRIx32 " ipaddr: %08" PRIx32 " ndx: %d MAX: %d\n",
-        (uint32_t)ipaddr, (uint32_t)CONFIG_NETUTILS_DHCPD_STARTIP, ndx,
+        (uint32_t)ipaddr, (uint32_t)g_dhcpd_config.ds_startip, ndx,
         CONFIG_NETUTILS_DHCPD_MAXLEASES);
 
   /* Verify that the address offset is within the supported range */
@@ -415,7 +449,7 @@ static inline in_addr_t dhcp_leaseipaddr(FAR struct lease_s *lease)
   /* Return IP address in host order */
 
   return (in_addr_t)(lease - g_state.ds_leases) +
-         CONFIG_NETUTILS_DHCPD_STARTIP;
+         g_dhcpd_config.ds_startip;
 }
 
 /****************************************************************************
@@ -443,11 +477,11 @@ static FAR struct lease_s *dhcpd_findbymac(FAR const uint8_t *mac)
 
 static FAR struct lease_s *dhcpd_findbyipaddr(in_addr_t ipaddr)
 {
-  if (ipaddr >= CONFIG_NETUTILS_DHCPD_STARTIP &&
-      ipaddr <= CONFIG_NETUTILS_DHCP_OPTION_ENDIP)
+  if (ipaddr >= g_dhcpd_config.ds_startip &&
+      ipaddr <= g_dhcpd_config.ds_endip)
     {
       FAR struct lease_s *lease =
-        &g_state.ds_leases[ipaddr - CONFIG_NETUTILS_DHCPD_STARTIP];
+        &g_state.ds_leases[ipaddr - g_dhcpd_config.ds_startip];
       if (lease->allocated > 0)
         {
           return lease;
@@ -466,8 +500,8 @@ static in_addr_t dhcpd_allocipaddr(void)
   struct lease_s *lease = NULL;
   in_addr_t ipaddr, startaddr;
 
-  ipaddr = startaddr = CONFIG_NETUTILS_DHCPD_STARTIP;
-  for (; ipaddr <= CONFIG_NETUTILS_DHCP_OPTION_ENDIP; ipaddr++)
+  ipaddr = startaddr = g_dhcpd_config.ds_startip;
+  for (; ipaddr <= g_dhcpd_config.ds_endip; ipaddr++)
     {
       /* Skip over address ending in 0 or 255 */
 
@@ -678,8 +712,8 @@ static inline bool dhcpd_verifyreqip(void)
    * range
    */
 
-  if (g_state.ds_optreqip >= CONFIG_NETUTILS_DHCPD_STARTIP &&
-      g_state.ds_optreqip <= CONFIG_NETUTILS_DHCP_OPTION_ENDIP)
+  if (g_state.ds_optreqip >= g_dhcpd_config.ds_startip &&
+      g_state.ds_optreqip <= g_dhcpd_config.ds_endip)
     {
       /* And verify that the lease has not already been taken or offered
        * (unless the lease/offer is expired, then the address is free game).
@@ -864,17 +898,17 @@ static inline int dhcpd_socket(FAR const char *interface)
     }
 #endif
 
-#ifdef CONFIG_NET_UDP_BINDTODEVICE
+#ifdef CONFIG_NET_BINDTODEVICE
   /* Bind socket to interface, because UDP packets have to be sent to the
    * broadcast address at a moment when it is not possible to decide the
    * target network device using the local or remote address (which is,
    * by definition and purpose of DHCP, undefined yet).
    */
 
-  if (setsockopt(sockfd, IPPROTO_UDP, UDP_BINDTODEVICE,
+  if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE,
                  interface, strlen(interface)) < 0)
     {
-      ninfo("ERROR: setsockopt UDP_BINDTODEVICE failed: %d\n", errno);
+      ninfo("ERROR: setsockopt SO_BINDTODEVICE failed: %d\n", errno);
       close(sockfd);
       return ERROR;
     }
@@ -982,7 +1016,7 @@ static int dhcpd_sendpacket(int sockfd, int bbroadcast)
 #endif
 
   /* Create a socket to respond with a packet to the client.  We
-   * cannot re-use the listener socket because it is not bound correctly
+   * cannot reuse the listener socket because it is not bound correctly
    */
 
   /* Then send the response to the DHCP client port at that address */
@@ -1012,7 +1046,7 @@ static inline int dhcpd_sendoffer(int sockfd, in_addr_t ipaddr,
   in_addr_t netaddr;
 #ifdef HAVE_DNSIP
   uint32_t dnsaddr;
-  dnsaddr = htonl(CONFIG_NETUTILS_DHCPD_DNSIP);
+  dnsaddr = htonl(g_dhcpd_config.ds_dnsip);
 #endif
   /* IP address is in host order */
 
@@ -1032,11 +1066,11 @@ static inline int dhcpd_sendoffer(int sockfd, in_addr_t ipaddr,
   dhcpd_addoption32(DHCP_OPTION_LEASE_TIME, htonl(leasetime));
 #ifdef HAVE_NETMASK
   dhcpd_addoption32(DHCP_OPTION_SUBNET_MASK,
-                    htonl(CONFIG_NETUTILS_DHCPD_NETMASK));
+                    htonl(g_dhcpd_config.ds_netmask));
 #endif
 #ifdef HAVE_ROUTERIP
   dhcpd_addoption32(DHCP_OPTION_ROUTER,
-                    htonl(CONFIG_NETUTILS_DHCPD_ROUTERIP));
+                    htonl(g_dhcpd_config.ds_routerip));
 #endif
 #ifdef HAVE_DNSIP
   dhcp_addoption32p(DHCP_OPTION_DNS_SERVER, (FAR uint8_t *)&dnsaddr);
@@ -1074,7 +1108,7 @@ int dhcpd_sendack(int sockfd, in_addr_t ipaddr)
   in_addr_t netaddr;
 #ifdef HAVE_DNSIP
   uint32_t dnsaddr;
-  dnsaddr = htonl(CONFIG_NETUTILS_DHCPD_DNSIP);
+  dnsaddr = htonl(g_dhcpd_config.ds_dnsip);
 #endif
 
   /* Initialize the ACK response */
@@ -1096,11 +1130,11 @@ int dhcpd_sendack(int sockfd, in_addr_t ipaddr)
   dhcpd_addoption32(DHCP_OPTION_LEASE_TIME, htonl(leasetime));
 #ifdef HAVE_NETMASK
   dhcpd_addoption32(DHCP_OPTION_SUBNET_MASK,
-                    htonl(CONFIG_NETUTILS_DHCPD_NETMASK));
+                    htonl(g_dhcpd_config.ds_netmask));
 #endif
 #ifdef HAVE_ROUTERIP
   dhcpd_addoption32(DHCP_OPTION_ROUTER,
-                    htonl(CONFIG_NETUTILS_DHCPD_ROUTERIP));
+                    htonl(g_dhcpd_config.ds_routerip));
 #endif
 #ifdef HAVE_DNSIP
   dhcp_addoption32p(DHCP_OPTION_DNS_SERVER, (FAR uint8_t *)&dnsaddr);
@@ -1316,8 +1350,8 @@ static inline int dhcpd_request(int sockfd)
        * maybe requested before the last shutdown, lease again.
        */
 
-      else if (g_state.ds_optreqip >= CONFIG_NETUTILS_DHCPD_STARTIP &&
-               g_state.ds_optreqip <= CONFIG_NETUTILS_DHCP_OPTION_ENDIP)
+      else if (g_state.ds_optreqip >= g_dhcpd_config.ds_startip &&
+               g_state.ds_optreqip <= g_dhcpd_config.ds_endip)
         {
           ipaddr = g_state.ds_optreqip;
           response = DHCPACK;
@@ -1370,7 +1404,7 @@ static inline int dhcpd_decline(void)
   lease = dhcpd_findbymac(g_state.ds_inpacket.chaddr);
   if (lease)
     {
-      /* Disassociate the IP from the MAC, but prevent re-used of this
+      /* Disassociate the IP from the MAC, but prevent reused of this
        * address for a period of time.
        */
 
@@ -1422,7 +1456,7 @@ static inline int dhcpd_openlistener(FAR const char *interface)
 
   /* Get the IP address of the selected device */
 
-  strncpy(req.ifr_name, interface, IFNAMSIZ);
+  strlcpy(req.ifr_name, interface, IFNAMSIZ);
   ret = ioctl(sockfd, SIOCGIFADDR, (unsigned long)&req);
   if (ret < 0)
     {
@@ -1460,9 +1494,73 @@ static inline int dhcpd_openlistener(FAR const char *interface)
  * Name: dhcpd_task_run
  ****************************************************************************/
 
+#ifndef CONFIG_BUILD_KERNEL
 static int dhcpd_task_run(int argc, char **argv)
 {
   return dhcpd_run(argv[1]);
+}
+#endif
+
+/****************************************************************************
+ * Name: dhcpd_get_pid
+ *
+ * Description:
+ *   Use /proc filesystem to get dhcpd process PID
+ *
+ * Returned Value:
+ *   PID of dhcpd process on success, -1 on failure
+ *
+ ****************************************************************************/
+
+#if !defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_SCHED_WAITPID)
+static pid_t dhcpd_get_pid(void)
+{
+  pid_t pid = -1;
+
+#if !defined(CONFIG_BUILD_KERNEL)
+  pid = g_dhcpd_daemon.ds_pid;
+#elif defined(CONFIG_SYSTEM_POPEN)
+  FAR FILE *fp;
+  char line[32];
+
+  fp = popen(("pidof dhcpd"), "r");
+  if (fp == NULL)
+    {
+      return -errno;
+    }
+
+  if (fgets(line, sizeof(line), fp) != NULL)
+    {
+      pid = atoi(line);
+    }
+
+  pclose(fp);
+#endif
+
+  return pid;
+}
+#endif
+
+/****************************************************************************
+ * Name: dhcpd_signal_handler
+ *
+ * Description:
+ *   Signal handler for CONFIG_NETUTILS_DHCPD_SIGWAKEUP
+ *   This function allows dhcpd_stop to terminate dhcpd daemon
+ *
+ * Input Parameters:
+ *   signo - Signal number
+ *   info  - Signal information
+ *   ctx   - Signal context
+ *
+ ****************************************************************************/
+
+static void
+dhcpd_signal_handler(int signo, FAR siginfo_t *info, FAR void *ctx)
+{
+  /* Set global flag to indicate stop request */
+
+  g_dhcpd_daemon.ds_state = DHCPD_STOP_REQUESTED;
 }
 
 /****************************************************************************
@@ -1475,7 +1573,8 @@ static int dhcpd_task_run(int argc, char **argv)
 
 int dhcpd_run(FAR const char *interface)
 {
-  int sockfd;
+  struct sigaction act;
+  int sockfd = -1;
   int nbytes;
 
   ninfo("Started\n");
@@ -1487,23 +1586,33 @@ int dhcpd_run(FAR const char *interface)
       return OK;
     }
 
+  /* Initialize everything to zero */
+
+  g_dhcpd_daemon.ds_data = malloc(sizeof(struct dhcpd_state_s));
+  if (g_dhcpd_daemon.ds_data == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  memset(g_dhcpd_daemon.ds_data, 0, sizeof(struct dhcpd_state_s));
+
   /* Update the pid if running in daemon mode */
 
   g_dhcpd_daemon.ds_pid = getpid();
+
+  /* Install signal handler for CONFIG_NETUTILS_DHCPD_SIGWAKEUP */
+
+  memset(&act, 0, sizeof(act));
+  act.sa_sigaction = dhcpd_signal_handler;
+  act.sa_flags = SA_SIGINFO;
+  sigaction(CONFIG_NETUTILS_DHCPD_SIGWAKEUP, &act, NULL);
 
   /* Indicate that we have started */
 
   g_dhcpd_daemon.ds_state = DHCPD_RUNNING;
 
-  sem_post(&g_dhcpd_daemon.ds_sync);
-
-  /* Initialize everything to zero */
-
-  memset(&g_state, 0, sizeof(struct dhcpd_state_s));
-
   /* Now loop indefinitely, reading packets from the DHCP server socket */
 
-  sockfd = -1;
   while (g_dhcpd_daemon.ds_state != DHCPD_STOP_REQUESTED)
     {
       /* Create a socket to listen for requests from DHCP clients */
@@ -1584,9 +1693,10 @@ int dhcpd_run(FAR const char *interface)
         }
     }
 
+  free(g_dhcpd_daemon.ds_data);
+  g_dhcpd_daemon.ds_data = NULL;
   g_dhcpd_daemon.ds_pid   = -1;
   g_dhcpd_daemon.ds_state = DHCPD_STOPPED;
-  sem_post(&g_dhcpd_daemon.ds_sync);
 
   return OK;
 }
@@ -1603,6 +1713,7 @@ int dhcpd_run(FAR const char *interface)
  *
  ****************************************************************************/
 
+#ifndef CONFIG_BUILD_KERNEL
 int dhcpd_start(FAR const char *interface)
 {
   FAR char *argv[2];
@@ -1613,17 +1724,13 @@ int dhcpd_start(FAR const char *interface)
 
   /* Is the DHCPD in a non-running state? */
 
-  sem_wait(&g_dhcpd_daemon.ds_lock);
-  if (g_dhcpd_daemon.ds_state == DHCPD_NOT_RUNNING ||
-      g_dhcpd_daemon.ds_state == DHCPD_STOPPED)
+  if (dhcpd_get_pid() < 0)
     {
       /* Start the DHCPD daemon */
 
-      g_dhcpd_daemon.ds_state = DHCPD_STARTED;
-      pid =
-        task_create("DHCPD daemon", CONFIG_NETUTILS_DHCPD_PRIORITY,
-                    CONFIG_NETUTILS_DHCPD_STACKSIZE, dhcpd_task_run,
-                    argv);
+      pid = task_create("dhcpd", CONFIG_NETUTILS_DHCPD_PRIORITY,
+                        CONFIG_NETUTILS_DHCPD_STACKSIZE, dhcpd_task_run,
+                        argv);
 
       /* Handle failures to start the DHCPD daemon */
 
@@ -1631,24 +1738,14 @@ int dhcpd_start(FAR const char *interface)
         {
           int errval = errno;
 
-          g_dhcpd_daemon.ds_state = DHCPD_STOPPED;
           nerr("ERROR: Failed to start the DHCPD daemon: %d\n", errval);
-          sem_post(&g_dhcpd_daemon.ds_lock);
           return -errval;
         }
-
-      /* Wait for any daemon state change */
-
-      do
-        {
-          sem_wait(&g_dhcpd_daemon.ds_sync);
-        }
-      while (g_dhcpd_daemon.ds_state == DHCPD_STARTED);
     }
 
-  sem_post(&g_dhcpd_daemon.ds_lock);
   return OK;
 }
+#endif
 
 /****************************************************************************
  * Name: dhcpd_stop
@@ -1662,43 +1759,108 @@ int dhcpd_start(FAR const char *interface)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_SCHED_WAITPID
 int dhcpd_stop(void)
 {
-  int ret;
+  pid_t pid;
 
   /* Is the DHCPD in a running state? */
 
-  sem_wait(&g_dhcpd_daemon.ds_lock);
-  if (g_dhcpd_daemon.ds_state == DHCPD_STARTED ||
-      g_dhcpd_daemon.ds_state == DHCPD_RUNNING)
+  pid = dhcpd_get_pid();
+  if (pid >= 0)
     {
       /* Yes.. request that the daemon stop. */
 
-      g_dhcpd_daemon.ds_state = DHCPD_STOP_REQUESTED;
-
-      /* Wait for any daemon state change */
-
-      do
+      if (kill(pid, CONFIG_NETUTILS_DHCPD_SIGWAKEUP) < 0)
         {
-          /* Signal the DHCPD client */
-
-          ret = kill(g_dhcpd_daemon.ds_pid,
-                     CONFIG_NETUTILS_DHCPD_SIGWAKEUP);
-
-          if (ret < 0)
-            {
-              nerr("ERROR: kill pid %d failed: %d\n",
-                   g_dhcpd_daemon.ds_pid, errno);
-              break;
-            }
-
-          /* Wait for the DHCPD client to respond to the stop request */
-
-          sem_wait(&g_dhcpd_daemon.ds_sync);
+          nerr("ERROR: kill pid %d failed: %d\n", pid, errno);
+          return -errno;
         }
-      while (g_dhcpd_daemon.ds_state == DHCPD_STOP_REQUESTED);
+
+      /* Wait for the DHCPD client to respond to the stop request */
+
+      if (waitpid(pid, NULL, 0) < 0)
+        {
+          nerr("ERROR: waitpid failed: %d\n", errno);
+          return -errno;
+        }
     }
 
-  sem_post(&g_dhcpd_daemon.ds_lock);
   return OK;
 }
+#endif
+
+/****************************************************************************
+ * Name: dhcpd_set_startip
+ *
+ * Description:
+ *   Set start IP for DHCPD
+ *
+ * Returned Value:
+ *   OK
+ *
+ ****************************************************************************/
+
+int dhcpd_set_startip(in_addr_t startip)
+{
+  g_dhcpd_config.ds_startip = startip;
+  g_dhcpd_config.ds_endip = startip + CONFIG_NETUTILS_DHCPD_MAXLEASES - 1;
+  return OK;
+}
+
+#ifdef HAVE_ROUTERIP
+/****************************************************************************
+ * Name: dhcpd_set_routerip
+ *
+ * Description:
+ *   Set Router IP for DHCPD
+ *
+ * Returned Value:
+ *   OK
+ *
+ ****************************************************************************/
+
+int dhcpd_set_routerip(in_addr_t routerip)
+{
+  g_dhcpd_config.ds_routerip = routerip;
+  return OK;
+}
+#endif
+
+#ifdef HAVE_NETMASK
+/****************************************************************************
+ * Name: dhcpd_set_netmask
+ *
+ * Description:
+ *   Set Netmask for DHCPD
+ *
+ * Returned Value:
+ *   OK
+ *
+ ****************************************************************************/
+
+int dhcpd_set_netmask(in_addr_t netmask)
+{
+  g_dhcpd_config.ds_netmask = netmask;
+  return OK;
+}
+#endif
+
+#ifdef HAVE_DNSIP
+/****************************************************************************
+ * Name: dhcpd_set_dnsip
+ *
+ * Description:
+ *   Set DNS for DHCPD
+ *
+ * Returned Value:
+ *   OK
+ *
+ ****************************************************************************/
+
+int dhcpd_set_dnsip(in_addr_t dnsip)
+{
+  g_dhcpd_config.ds_dnsip = dnsip;
+  return OK;
+}
+#endif

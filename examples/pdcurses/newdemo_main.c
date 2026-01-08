@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/pdcurses/newdemo_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -303,7 +305,7 @@ int main(int argc, FAR char *argv[])
 
   traceon();
   initscr();
-  seed = time((time_t *) 0);
+  seed = time(NULL);
   srand(seed);
 
   start_color();
@@ -316,8 +318,8 @@ int main(int argc, FAR char *argv[])
   curs_set(0);
   noecho();
 
-  /* Refresh stdscr so that reading from it will not cause it to overwrite the
-   * other windows that are being created.
+  /* Refresh stdscr so that reading from it will not cause it to overwrite
+   * the other windows that are being created.
    */
 
   refresh();
@@ -335,7 +337,7 @@ int main(int argc, FAR char *argv[])
       return 1;
     }
 
-  for (;;)
+  for (; ; )
     {
       init_pair(1, COLOR_WHITE, COLOR_BLUE);
       wbkgd(win, COLOR_PAIR(1));
@@ -433,7 +435,7 @@ int main(int argc, FAR char *argv[])
           for (i = w + msg_len; i > 0; i--)
             {
               memset(visbuf, ' ', w);
-              strncpy(scrollbuf + i, message, msg_len);
+              strlcpy(scrollbuf + i, message, msg_len);
               mvwaddnstr(win, height / 2, 1, visbuf, w);
               wrefresh(win);
 

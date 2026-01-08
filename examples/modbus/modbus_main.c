@@ -1,5 +1,7 @@
 /****************************************************************************
- * apps/examples/modbus/main.c
+ * apps/examples/modbus/modbus_main.c
+ *
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -49,7 +51,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <termios.h>
 #include <signal.h>
 #include <errno.h>
 
@@ -67,11 +68,8 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-/* Configuration ************************************************************/
 
-#ifndef CONFIG_SERIAL_TERMIOS
-#  error "CONFIG_SERIAL_TERMIOS is needed by modbus example"
-#endif
+/* Configuration ************************************************************/
 
 #ifndef CONFIG_EXAMPLES_MODBUS_PORT
 #  define CONFIG_EXAMPLES_MODBUS_PORT 0
@@ -127,7 +125,6 @@ struct modbus_state_s
 #endif
   pthread_t threadid;
   pthread_mutex_t lock;
-  volatile bool quit;
 };
 
 /****************************************************************************
@@ -144,7 +141,10 @@ static void modbus_showusage(FAR const char *progname, int exitcode);
  ****************************************************************************/
 
 static struct modbus_state_s g_modbus;
-static const uint8_t g_slaveid[] = { 0xaa, 0xbb, 0xcc };
+static const uint8_t g_slaveid[] =
+{
+  0xaa, 0xbb, 0xcc
+};
 
 /****************************************************************************
  * Private Functions
@@ -166,7 +166,7 @@ static inline int modbus_initialize(void)
 
   /* Verify that we are in the stopped state */
 
-  if (g_modbus.threadstate != STOPPED)
+  if (g_modbus.threadstate == RUNNING)
     {
       fprintf(stderr, "modbus_main: "
               "ERROR: Bad state: %d\n", g_modbus.threadstate);
@@ -195,7 +195,8 @@ static inline int modbus_initialize(void)
    */
 
   mberr = eMBInit(MB_RTU, 0x0a, CONFIG_EXAMPLES_MODBUS_PORT,
-                  CONFIG_EXAMPLES_MODBUS_BAUD, CONFIG_EXAMPLES_MODBUS_PARITY);
+                  CONFIG_EXAMPLES_MODBUS_BAUD,
+                  CONFIG_EXAMPLES_MODBUS_PARITY);
   if (mberr != MB_ENOERR)
     {
       fprintf(stderr, "modbus_main: "
@@ -235,6 +236,7 @@ static inline int modbus_initialize(void)
   return OK;
 
 errout_with_modbus:
+
   /* Release hardware resources. */
 
   eMBClose();
@@ -378,9 +380,10 @@ static inline int modbus_create_pollthread(void)
 {
   int ret;
 
-  if (g_modbus.threadstate == STOPPED)
+  if (g_modbus.threadstate != RUNNING)
     {
-      ret = pthread_create(&g_modbus.threadid, NULL, modbus_pollthread, NULL);
+      ret = pthread_create(&g_modbus.threadid, NULL,
+                           modbus_pollthread, NULL);
     }
     else
     {
@@ -425,30 +428,32 @@ static void modbus_showusage(FAR const char *progname, int exitcode)
 
 int main(int argc, FAR char *argv[])
 {
+  bool quit = true;
   int option;
   int ret;
 
   /* Handle command line arguments */
-
-  g_modbus.quit = false;
 
   while ((option = getopt(argc, argv, "desqh")) != ERROR)
     {
       switch (option)
         {
           case 'd': /* Disable protocol stack */
-            pthread_mutex_lock(&g_modbus.lock);
             g_modbus.threadstate = SHUTDOWN;
-            pthread_mutex_unlock(&g_modbus.lock);
             break;
 
           case 'e': /* Enable the protocol stack */
             {
+              /* Keep running, otherwise the thread will die */
+
+              quit = false;
+
               ret = modbus_create_pollthread();
               if (ret != OK)
                 {
                   fprintf(stderr, "modbus_main: "
-                          "ERROR: modbus_create_pollthread failed: %d\n", ret);
+                          "ERROR: modbus_create_pollthread failed: %d\n",
+                          ret);
                   exit(EXIT_FAILURE);
                 }
             }
@@ -478,7 +483,6 @@ int main(int argc, FAR char *argv[])
             break;
 
           case 'q': /* Quit application */
-            g_modbus.quit = true;
             pthread_kill(g_modbus.threadid, 9);
             break;
 
@@ -492,6 +496,13 @@ int main(int argc, FAR char *argv[])
             modbus_showusage(argv[0], EXIT_FAILURE);
             break;
         }
+    }
+
+  /* Don't exit until the thread finishes */
+
+  if (!quit)
+    {
+      pthread_join(g_modbus.threadid, NULL);
     }
 
   return EXIT_SUCCESS;
@@ -540,8 +551,8 @@ eMBErrorCode eMBRegInputCB(uint8_t *buffer, uint16_t address, uint16_t nregs)
  *
  ****************************************************************************/
 
-eMBErrorCode eMBRegHoldingCB(uint8_t *buffer, uint16_t address, uint16_t nregs,
-                             eMBRegisterMode mode)
+eMBErrorCode eMBRegHoldingCB(uint8_t *buffer, uint16_t address,
+                             uint16_t nregs, eMBRegisterMode mode)
 {
   eMBErrorCode    mberr = MB_ENOERR;
   int             index;
@@ -555,6 +566,7 @@ eMBErrorCode eMBRegHoldingCB(uint8_t *buffer, uint16_t address, uint16_t nregs,
       switch (mode)
         {
           /* Pass current register values to the protocol stack. */
+
           case MB_REG_READ:
             while (nregs > 0)
               {
@@ -596,8 +608,8 @@ eMBErrorCode eMBRegHoldingCB(uint8_t *buffer, uint16_t address, uint16_t nregs,
  *
  ****************************************************************************/
 
-eMBErrorCode eMBRegCoilsCB(uint8_t *buffer, uint16_t address, uint16_t ncoils,
-                           eMBRegisterMode mode)
+eMBErrorCode eMBRegCoilsCB(uint8_t *buffer, uint16_t address,
+                           uint16_t ncoils, eMBRegisterMode mode)
 {
   eMBErrorCode    mberr = MB_ENOERR;
   int             index;
@@ -653,7 +665,8 @@ eMBErrorCode eMBRegCoilsCB(uint8_t *buffer, uint16_t address, uint16_t ncoils,
  *
  ****************************************************************************/
 
-eMBErrorCode eMBRegDiscreteCB(uint8_t *buffer, uint16_t address, uint16_t ndiscrete)
+eMBErrorCode eMBRegDiscreteCB(uint8_t *buffer, uint16_t address,
+                              uint16_t ndiscrete)
 {
   return MB_ENOREG;
 }

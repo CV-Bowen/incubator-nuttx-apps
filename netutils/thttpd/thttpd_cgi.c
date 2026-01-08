@@ -1,14 +1,13 @@
 /****************************************************************************
  * apps/netutils/thttpd/thttpd_cgi.c
- * CGI support
  *
- *   Copyright (C) 2009, 2011, 2016 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * Derived from the file libhttpd.c in the original THTTPD package:
- *
- *   Copyright © 1995,1998,1999,2000,2001 by
- *   Jef Poskanzer <jef@mail.acme.com>. All rights reserved.
+ * SPDX-License-Identifier: BSD-2-Clause
+ * SPDX-FileCopyrightText: 2011, 2016 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2009 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2000, 2001 by Jef Poskanzer <jef@mail.acme.com>.
+ * SPDX-FileCopyrightText: 1998, 1999 by Jef Poskanzer <jef@mail.acme.com>.
+ * SPDX-FileCopyrightText: 1995 by Jef Poskanzer <jef@mail.acme.com>.
+ * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,7 +54,6 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/symtab.h>
 #include <nuttx/binfmt/binfmt.h>
 #include "netutils/thttpd.h"
 
@@ -718,7 +716,7 @@ static int cgi_child(int argc, char **argv)
 {
   FAR httpd_conn *hc = (FAR httpd_conn *)strtoul(argv[1], NULL, 16);
 #if CONFIG_THTTPD_CGI_TIMELIMIT > 0
-  ClientData client_data;
+  clientdata client_data;
 #endif
   FAR char **argp;
   FAR struct cgi_conn_s *cc;
@@ -886,10 +884,10 @@ static int cgi_child(int argc, char **argv)
   ninfo("Starting CGI: %s\n", hc->expnfilename);
 
 #ifdef CONFIG_THTTPD_NXFLAT
-  child = exec(hc->expnfilename, (FAR char * const *)argp,
+  child = exec(hc->expnfilename, argp, NULL,
                g_thttpdsymtab, g_thttpdnsymbols);
 #else
-  child = exec(hc->expnfilename, (FAR char * const *)argp, NULL, 0);
+  child = exec(hc->expnfilename, argp, NULL, NULL, 0);
 #endif
   if (child < 0)
     {
@@ -1060,8 +1058,7 @@ int cgi(httpd_conn *hc)
       argv[1] = NULL;
 
       child = task_create("CGI child", CONFIG_THTTPD_CGI_PRIORITY,
-                          CONFIG_THTTPD_CGI_STACKSIZE,
-                          (main_t)cgi_child, (FAR char * const *)argv);
+                          CONFIG_THTTPD_CGI_STACKSIZE, cgi_child, argv);
       if (child < 0)
         {
           nerr("ERROR: task_create: %d\n", errno);
@@ -1098,7 +1095,7 @@ errout_with_sem:
 }
 
 #if CONFIG_THTTPD_CGI_TIMELIMIT > 0
-static void cgi_kill(ClientData client_data, struct timeval *nowP)
+static void cgi_kill(clientdata client_data, struct timeval *nowp)
 {
   pid_t pid = (pid_t)client_data.i;
 

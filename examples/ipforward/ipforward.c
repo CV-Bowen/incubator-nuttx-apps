@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/ipforward/ipforward.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -73,7 +75,7 @@
 #endif
 
 /****************************************************************************
- * Name: Private Types
+ * Private Types
  ****************************************************************************/
 
 struct ipfwd_tun_s
@@ -228,7 +230,7 @@ static int ipfwd_tun_configure(FAR struct ipfwd_tun_s *tun)
       return -errcode;
     }
 
-  strncpy(tun->it_devname, ifr.ifr_name, MAX_DEVNAME);
+  strlcpy(tun->it_devname, ifr.ifr_name, MAX_DEVNAME);
   printf("Created TUN device: %s\n", tun->it_devname);
   return 0;
 }
@@ -289,10 +291,11 @@ static int ipfwd_netconfig(FAR struct ipfwd_tun_s *tun, IPADDR_TYPE ipaddr,
 }
 
 /****************************************************************************
- * Name: Checksums
+ * Name: check_sum
  ****************************************************************************/
 
-static uint16_t chksum(uint16_t sum, FAR const uint8_t *data, uint16_t len)
+static uint16_t check_sum(uint16_t sum, FAR const uint8_t *data,
+                          uint16_t len)
 {
   FAR const uint8_t *dataptr;
   FAR const uint8_t *last_byte;
@@ -335,7 +338,7 @@ static uint16_t ipv4_chksum(FAR const uint8_t *buffer)
 {
   uint16_t sum;
 
-  sum = chksum(0, buffer, IPv4_HDRLEN);
+  sum = check_sum(0, buffer, IPv4_HDRLEN);
   return (sum == 0) ? 0xffff : htons(sum);
 }
 #endif
@@ -362,12 +365,12 @@ static uint16_t common_chksum(FAR uint8_t *buffer, uint8_t proto)
 
   /* Sum IP source and destination addresses. */
 
-  sum = chksum(sum, (FAR uint8_t *)&ipv6->srcipaddr,
-               2 * sizeof(net_ipv6addr_t));
+  sum = check_sum(sum, (FAR uint8_t *)&ipv6->srcipaddr,
+                  2 * sizeof(net_ipv6addr_t));
 
   /* Sum IP payload data. */
 
-  sum = chksum(sum, &buffer[IPv6_HDRLEN], upperlen);
+  sum = check_sum(sum, &buffer[IPv6_HDRLEN], upperlen);
   return (sum == 0) ? 0xffff : htons(sum);
 #else
   FAR struct ipv4_hdr_s *ipv4 = (FAR struct ipv4_hdr_s *)buffer;
@@ -389,11 +392,12 @@ static uint16_t common_chksum(FAR uint8_t *buffer, uint8_t proto)
 
   /* Sum IP source and destination addresses. */
 
-  sum = chksum(sum, (FAR uint8_t *)&ipv4->srcipaddr, 2 * sizeof(in_addr_t));
+  sum = check_sum(sum, (FAR uint8_t *)&ipv4->srcipaddr,
+                  2 * sizeof(in_addr_t));
 
   /* Sum IP payload data. */
 
-  sum = chksum(sum, &buffer[IPv4_HDRLEN], upperlen);
+  sum = check_sum(sum, &buffer[IPv4_HDRLEN], upperlen);
   return (sum == 0) ? 0xffff : htons(sum);
 #endif
 }
@@ -766,7 +770,7 @@ int main(int argc, FAR char *argv[])
   if (ret < 0)
     {
       fprintf(stderr, "ERROR: Failed to create tun0: %d\n", ret);
-      goto errout;
+      return ret;
     }
 
   ret = ipfwd_netconfig(&fwd.if_tun0, g_tun0_laddr, g_netmask);
@@ -848,6 +852,5 @@ errout_with_tun1:
   close(fwd.if_tun1.it_fd);
 errout_with_tun0:
   close(fwd.if_tun0.it_fd);
-errout:
   return errcode;
 }

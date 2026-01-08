@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/system/nxlooper/nxlooper_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -49,7 +51,7 @@
 #endif
 
 /****************************************************************************
- * Private Type Declarations
+ * Private Types
  ****************************************************************************/
 
 typedef int (*nxlooper_func)(FAR struct nxlooper_s *plooper, char *pargs);
@@ -124,7 +126,7 @@ static const struct mp_cmd_s g_nxlooper_cmds[] =
 #endif
   {
     "loopback",
-    "channels bpsamp samprate chmap",
+    "channels bpsamp samprate format chmap",
     nxlooper_cmd_loopback,
     NXLOOPER_HELP_TEXT("Audio loopback test")
   },
@@ -196,18 +198,24 @@ static const int g_nxlooper_cmd_count = sizeof(g_nxlooper_cmds) /
 static int nxlooper_cmd_loopback(FAR struct nxlooper_s *plooper, char *parg)
 {
   int ret;
+  int format = AUDIO_FMT_UNDEF;
   int channels = 0;
   int bpsamp = 0;
   int samprate = 0;
   int chmap = 0;
 
-  sscanf(parg, "%d %d %d %d", &channels, &bpsamp,
-                                 &samprate, &chmap);
+  sscanf(parg, "%d %d %d %d %d", &channels, &bpsamp,
+                                &samprate, &chmap, &format);
+
+  if (format == AUDIO_FMT_UNDEF)
+    {
+      format = AUDIO_FMT_PCM;
+    }
 
   /* Try to loopback raw data with settings specified */
 
-  ret = nxlooper_loopraw(plooper, channels, bpsamp,
-                         samprate, chmap);
+  ret = nxlooper_loopback(plooper, format, channels, bpsamp,
+                          samprate, chmap);
 
   /* nxlooper_loopraw returned values:
    *
@@ -264,7 +272,7 @@ static int nxlooper_cmd_volume(FAR struct nxlooper_s *plooper, char *parg)
     {
       /* Get the percentage value from the argument */
 
-      percent = (uint16_t)(atof(parg) * 10.0);
+      percent = (uint16_t)(strtof(parg, NULL) * 10.0f);
       return nxlooper_setvolume(plooper, percent);
     }
 
@@ -494,7 +502,7 @@ static int nxlooper_cmd_help(FAR struct nxlooper_s *plooper, char *parg)
 
 int main(int argc, FAR char *argv[])
 {
-  char                  buffer[CONFIG_NSH_LINELEN];
+  char                  buffer[LINE_MAX];
   int                   len;
   int                   x;
   int                   running;
@@ -527,10 +535,11 @@ int main(int argc, FAR char *argv[])
 
       /* Read a line from the terminal */
 
-      len = readline(buffer, sizeof(buffer), stdin, stdout);
-      buffer[len] = '\0';
+      len = readline_stream(buffer, sizeof(buffer),
+                            stdin, stdout);
       if (len > 0)
         {
+          buffer[len] = '\0';
           if (strncmp(buffer, "!", 1) != 0)
             {
               /* nxlooper command */

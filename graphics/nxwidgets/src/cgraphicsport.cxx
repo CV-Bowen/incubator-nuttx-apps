@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/graphics/nxwidgets/src/cgraphicsport.cxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -579,7 +581,7 @@ void CGraphicsPort::drawBitmapGreyScale(nxgl_coord_t x, nxgl_coord_t y,
        src += bitmap->stride;
     }
 
-  delete run;
+  delete[] run;
 }
 
 /**
@@ -824,7 +826,7 @@ void CGraphicsPort::_drawText(struct nxgl_point_s *pos, CRect *bound,
       pos->x += fontWidth;
     }
 
-  delete glyph;
+  delete[] glyph;
 }
 
 /**
@@ -962,7 +964,7 @@ void CGraphicsPort::greyScale(nxgl_coord_t x, nxgl_coord_t y,
                        &origin, rowBitmap.stride) ;
     }
 
-  delete rowBuffer;
+  delete[] rowBuffer;
 }
 
 /**
@@ -1038,5 +1040,5 @@ void CGraphicsPort::invert(nxgl_coord_t x, nxgl_coord_t y,
                        &origin, rowBitmap.stride) ;
     }
 
-  delete rowBuffer;
+  delete[] rowBuffer;
 };

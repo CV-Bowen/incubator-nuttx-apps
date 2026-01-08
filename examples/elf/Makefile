@@ -1,6 +1,8 @@
 ############################################################################
 # apps/examples/elf/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -30,6 +32,8 @@ CSRCS = cromfs.c
 endif
 CSRCS += dirlist.c
 CSRCS += symtab.c
+tests$(DELIM)symtab.c_CFLAGS = -fno-builtin
+tests$(DELIM)symtab.c_CELFFLAGS = -fno-builtin
 MAINSRC = elf_main.c
 
 PROGNAME = elf

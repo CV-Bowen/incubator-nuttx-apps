@@ -1,6 +1,8 @@
 ############################################################################
 # apps/wireless/iwpan/src/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -24,6 +26,6 @@ MAINSRC = iwpan.c
 
 DEPPATH += --dep-path src
 VPATH += :src
-CFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/wireless/iwpan/src}
+CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/wireless/iwpan/src
 
 endif

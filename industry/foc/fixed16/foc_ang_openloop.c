@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/industry/foc/fixed16/foc_ang_openloop.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -27,6 +29,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "industry/foc/foc_log.h"
 #include "industry/foc/fixed16/foc_angle.h"
@@ -257,9 +260,11 @@ static int foc_angle_ol_run_b16(FAR foc_angle_b16_t *h,
   DEBUGASSERT(h->data);
   ol = h->data;
 
-  /* Update open-loop */
+  /* Update open-loop.
+   * NOTE: we don't use dir argument here, instead we use signed velocity.
+   */
 
-  motor_openloop_b16(&ol->data, in->vel, in->dir);
+  motor_openloop_b16(&ol->data, in->vel, 1);
 
   tmp = motor_openloop_angle_get_b16(&ol->data);
 

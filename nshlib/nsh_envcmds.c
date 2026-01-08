@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/nshlib/nsh_envcmds.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -24,7 +26,6 @@
 
 #include <nuttx/config.h>
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -50,9 +51,12 @@
 
 #ifndef CONFIG_DISABLE_ENVIRON
 static const char g_pwd[]    = "PWD";
-#ifndef CONFIG_NSH_DISABLE_CD
+#  ifndef CONFIG_NSH_DISABLE_CD
 static const char g_oldpwd[] = "OLDPWD";
+#  endif
 #endif
+
+#if !defined(CONFIG_NSH_DISABLE_CD) || !defined(CONFIG_DISABLE_ENVIRON)
 static const char g_home[]   = CONFIG_LIBC_HOMEDIR;
 #endif
 
@@ -131,9 +135,9 @@ static void str_escape(FAR char *s)
  ****************************************************************************/
 
 #ifndef CONFIG_DISABLE_ENVIRON
-static inline FAR const char *nsh_getwd(const char *wd)
+static inline FAR const char *nsh_getwd(FAR const char *wd)
 {
-  const char *val;
+  FAR const char *val;
 
   /* If no working directory is defined, then default to the home directory */
 
@@ -155,6 +159,8 @@ static inline FAR const char *nsh_getwd(const char *wd)
 static int nsh_dumpvar(FAR struct nsh_vtbl_s *vtbl, FAR void *arg,
                        FAR const char *pair)
 {
+  UNUSED(arg);
+
   nsh_output(vtbl, "%s\n", pair);
   return OK;
 }
@@ -168,12 +174,14 @@ static int nsh_dumpvar(FAR struct nsh_vtbl_s *vtbl, FAR void *arg,
  * Name: nsh_getwd
  ****************************************************************************/
 
-#ifndef CONFIG_DISABLE_ENVIRON
-FAR const char *nsh_getcwd(void)
+FAR const char *nsh_getcwd(FAR struct nsh_vtbl_s *vtbl)
 {
+#ifndef CONFIG_DISABLE_ENVIRON
   return nsh_getwd(g_pwd);
-}
+#else
+  return vtbl->cwd;
 #endif
+}
 
 /****************************************************************************
  * Name: nsh_getfullpath
@@ -183,7 +191,7 @@ FAR const char *nsh_getcwd(void)
 FAR char *nsh_getfullpath(FAR struct nsh_vtbl_s *vtbl,
                           FAR const char *relpath)
 {
-  const char *wd;
+  FAR const char *wd;
 
   /* Handle some special cases */
 
@@ -200,7 +208,7 @@ FAR char *nsh_getfullpath(FAR struct nsh_vtbl_s *vtbl,
 
   /* Get the path to the current working directory */
 
-  wd = nsh_getcwd();
+  wd = nsh_getcwd(vtbl);
 
   /* Fake the '.' directory */
 
@@ -213,13 +221,11 @@ FAR char *nsh_getfullpath(FAR struct nsh_vtbl_s *vtbl,
 
   return nsh_getdirpath(vtbl, wd, relpath);
 }
-#endif
 
 /****************************************************************************
  * Name: nsh_freefullpath
  ****************************************************************************/
 
-#ifndef CONFIG_DISABLE_ENVIRON
 void nsh_freefullpath(FAR char *fullpath)
 {
   if (fullpath)
@@ -227,15 +233,14 @@ void nsh_freefullpath(FAR char *fullpath)
       free(fullpath);
     }
 }
-#endif
+#endif /* CONFIG_DISABLE_ENVIRON */
 
 /****************************************************************************
  * Name: cmd_cd
  ****************************************************************************/
 
-#ifndef CONFIG_DISABLE_ENVIRON
 #ifndef CONFIG_NSH_DISABLE_CD
-int cmd_cd(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
+int cmd_cd(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
 {
   FAR const char *path = argv[1];
   FAR char *alloc = NULL;
@@ -248,14 +253,16 @@ int cmd_cd(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
     {
       path = g_home;
     }
+#ifndef CONFIG_DISABLE_ENVIRON
   else if (strcmp(path, "-") == 0)
     {
       alloc = strdup(nsh_getwd(g_oldpwd));
       path  = alloc;
     }
+#endif
   else if (strcmp(path, "..") == 0)
     {
-      alloc = strdup(nsh_getcwd());
+      alloc = strdup(nsh_getcwd(vtbl));
       path  = dirname(alloc);
     }
   else
@@ -272,6 +279,12 @@ int cmd_cd(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
       nsh_error(vtbl, g_fmtcmdfailed, argv[0], "chdir", NSH_ERRNO);
       ret = ERROR;
     }
+#ifdef CONFIG_DISABLE_ENVIRON
+  else
+    {
+      strlcpy(vtbl->cwd, path, sizeof(vtbl->cwd));
+    }
+#endif
 
   /* Free any memory that was allocated */
 
@@ -288,60 +301,81 @@ int cmd_cd(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
   return ret;
 }
 #endif
-#endif
 
 /****************************************************************************
  * Name: cmd_echo
  ****************************************************************************/
 
 #ifndef CONFIG_NSH_DISABLE_ECHO
-int cmd_echo(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
+int cmd_echo(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
 {
   int newline = 1;
   int escape = 0;
-  int opt;
-  int i;
 
-  while ((opt = getopt(argc, argv, "neE")) != ERROR)
+  --argc;
+  ++argv;
+
+  while (argc > 0 && argv[0][0] == '-')
     {
-      switch (opt)
+      FAR char const *temp = argv[0] + 1;
+      size_t i;
+
+      for (i = 0; temp[i]; i++)
         {
-        case 'n':
-          newline = 0;
-          break;
-
-        case 'e':
-          escape = 1;
-          break;
-
-        case 'E':
-          escape = 0;
-          break;
-
-        case '?':
-        default:
-          nsh_error(vtbl, g_fmtarginvalid, argv[0]);
-          return ERROR;
+          switch (temp[i])
+            {
+              case 'e':
+              case 'E':
+              case 'n':
+                break;
+              default:
+                goto do_echo;
+            }
         }
+
+      if (i == 0)
+        {
+          goto do_echo;
+        }
+
+      while (*temp)
+        {
+          switch (*temp++)
+            {
+              case 'e':
+                escape = 1;
+                break;
+
+              case 'E':
+                escape = 0;
+                break;
+
+              case 'n':
+                newline = 0;
+                break;
+            }
+        }
+
+      --argc;
+      ++argv;
     }
 
-  /* echo each argument, separated by a space as it must have been on the
-   * command line.
-   */
-
-  for (i = optind; i < argc; i++)
+do_echo:
+  while (argc > 0)
     {
-      if (i != optind)
+      if (escape)
+        {
+          str_escape(argv[0]);
+        }
+
+      nsh_output(vtbl, "%s", argv[0]);
+
+      --argc;
+      ++argv;
+      if (argc > 0)
         {
           nsh_output(vtbl, " ");
         }
-
-      if (escape)
-        {
-          str_escape(argv[i]);
-        }
-
-      nsh_output(vtbl, "%s", argv[i]);
     }
 
   if (newline)
@@ -358,8 +392,10 @@ int cmd_echo(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
  ****************************************************************************/
 
 #ifndef CONFIG_NSH_DISABLE_ENV
-int cmd_env(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
+int cmd_env(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
 {
+  UNUSED(argc);
+
   return nsh_catfile(vtbl, argv[0],
                      CONFIG_NSH_PROC_MOUNTPOINT "/self/group/env");
 }
@@ -369,14 +405,15 @@ int cmd_env(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
  * Name: cmd_pwd
  ****************************************************************************/
 
-#ifndef CONFIG_DISABLE_ENVIRON
 #ifndef CONFIG_NSH_DISABLE_PWD
-int cmd_pwd(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
+int cmd_pwd(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
 {
-  nsh_output(vtbl, "%s\n", nsh_getcwd());
+  UNUSED(argc);
+  UNUSED(argv);
+
+  nsh_output(vtbl, "%s\n", nsh_getcwd(vtbl));
   return OK;
 }
-#endif
 #endif
 
 /****************************************************************************
@@ -384,7 +421,7 @@ int cmd_pwd(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
  ****************************************************************************/
 
 #ifndef CONFIG_NSH_DISABLE_SET
-int cmd_set(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
+int cmd_set(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
 {
   FAR char *value;
   int ret = OK;
@@ -529,8 +566,10 @@ int cmd_set(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
  ****************************************************************************/
 
 #ifndef CONFIG_NSH_DISABLE_UNSET
-int cmd_unset(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
+int cmd_unset(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
 {
+  UNUSED(argc);
+
 #if defined(CONFIG_NSH_VARS) || !defined(CONFIG_DISABLE_ENVIRON)
   int status;
 #endif
@@ -568,7 +607,7 @@ int cmd_unset(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
  ****************************************************************************/
 
 #ifndef CONFIG_NSH_DISABLE_EXPORT
-int cmd_export(FAR struct nsh_vtbl_s *vtbl, int argc, char **argv)
+int cmd_export(FAR struct nsh_vtbl_s *vtbl, int argc, FAR char **argv)
 {
   FAR const char *value = "";
   int status;

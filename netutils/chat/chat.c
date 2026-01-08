@@ -1,9 +1,10 @@
 /****************************************************************************
  * apps/netutils/chat/chat.c
  *
- *   Copyright (C) 2016 Vladimir Komendantskiy. All rights reserved.
- *   Author: Vladimir Komendantskiy <vladimir@moixaenergy.com>
- *   Partly based on code by Max Nekludov <macscomp@gmail.com>
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2016 Vladimir Komendantskiy. All rights reserved.
+ * SPDX-FileContributor: Vladimir Komendantskiy <vladimir@moixaenergy.com>
+ * SPDX-FileContributor: Max Nekludov <macscomp@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -61,7 +62,7 @@
 #define CHAT_TOKEN_SIZE    128
 
 /****************************************************************************
- * Pivate types
+ * Private types
  ****************************************************************************/
 
 /* Type of singly-linked list of tokens */
@@ -332,7 +333,7 @@ static int chat_internalise(FAR struct chat *priv,
 
       if (rhs)
         {
-          len = strlen(tok->string);
+          len = strlen(tok->string) + 1;
           if (!tok->no_termin)
             {
               /* Add space for the line terminator */
@@ -340,13 +341,13 @@ static int chat_internalise(FAR struct chat *priv,
               len += 2;
             }
 
-          line->rhs = malloc(len + 1);
+          line->rhs = malloc(len);
           if (line->rhs)
             {
               /* Copy the token and add the line terminator as appropriate */
 
-              sprintf(line->rhs, tok->no_termin ? "%s" : "%s\r\n",
-                      tok->string);
+              snprintf(line->rhs, len,
+                       tok->no_termin ? "%s" : "%s\r\n", tok->string);
             }
           else
             {
@@ -492,7 +493,7 @@ static void chat_flush(FAR struct chat *priv)
   char c;
 
   ninfo("starting\n");
-  while (chat_readb(priv, (FAR char *) &c, 0) == 0);
+  while (chat_readb(priv, &c, 0) == 0);
   ninfo("done\n");
 }
 

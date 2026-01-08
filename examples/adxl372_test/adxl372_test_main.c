@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/adxl372_test/adxl372_test_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -27,7 +29,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
-#include <nuttx/fs/fs.h>
+#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -41,7 +43,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define ARRAYSIZE(x) (sizeof((x)) / sizeof((x)[0]))
 #define PASSED        0
 
 #define SUB_PROMPT   "stst >"
@@ -147,7 +148,7 @@ static int adxl372_test(int is_interactive, FAR char *path)
   };
 
   char bfr[32] __attribute__((aligned(2)));  /* REVISIT: GCC dependent attribute */
-  FAR struct XYZ *pxyz = (FAR struct XYZ *) bfr;
+  FAR struct XYZ *pxyz = (FAR struct XYZ *)bfr;
   int rc = PASSED;
   int rc_step = PASSED;
 
@@ -335,11 +336,11 @@ static int adxl372_test(int is_interactive, FAR char *path)
           goto error_exit;
         }
 
-      printf("ADXL372 = ( %6d, %6d, %6d))\n",
+      printf("ADXL372 = (%6d, %6d, %6d))\n",
              pxyz->d[0], pxyz->d[1], pxyz->d[2]);
-      printf("ADXL372 = ( 0x%04X, 0x%04X, 0x%04X)\n",
+      printf("ADXL372 = (0x%04X, 0x%04X, 0x%04X)\n",
              pxyz->d[0], pxyz->d[1], pxyz->d[2]);
-      printf("ADXL372 raw = ( 0x%02X%02X, 0x%02X%02X, 0x%02X%02X)\n",
+      printf("ADXL372 raw = (0x%02X%02X, 0x%02X%02X, 0x%02X%02X)\n",
              bfr[1], bfr[0], bfr[3], bfr[2], bfr[5], bfr[4]);
 
       if (is_interactive)
@@ -394,7 +395,7 @@ int main(int argc, FAR char *argv[])
       adxl372_test,   /* ADXL372 accelerometer tests */
     };
 
-  FAR char *test_path[ARRAYSIZE(test_ptr_array)];
+  FAR char *test_path[nitems(test_ptr_array)];
 
   if (argc < 1 || *argv[1] == 0 || *(argv[1] + 1) == 0)
     {
@@ -490,7 +491,7 @@ int main(int argc, FAR char *argv[])
                   printf("Set to batch mode.\n");
                 }
             }
-          else if (ui >= ARRAYSIZE(test_ptr_array))
+          else if (ui >= nitems(test_ptr_array))
             {
               printf("Huh?\n");
             }
@@ -511,7 +512,7 @@ int main(int argc, FAR char *argv[])
     {
       printf("ADXL372 sensor diagnostic started in batch mode...\n");
 
-      for (ui = 0; ui < ARRAYSIZE(test_ptr_array); ui++)
+      for (ui = 0; ui < nitems(test_ptr_array); ui++)
         {
           step_rc = 0;
           if (test_ptr_array[ui] != 0)

@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/graphics/twm4nx/src/cwindowevent.hxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -215,8 +217,7 @@ namespace Twm4Nx
 
        CWindowEvent(FAR CTwm4Nx *twm4nx, FAR void *client,
                     FAR const struct SAppEvents &events,
-                    FAR const NXWidgets::CWidgetStyle *style =
-                    (const NXWidgets::CWidgetStyle *)NULL);
+                    FAR const NXWidgets::CWidgetStyle *style = NULL);
 
       /**
        * CWindowEvent Destructor.

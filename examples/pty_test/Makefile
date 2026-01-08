@@ -1,6 +1,8 @@
 ############################################################################
 # apps/examples/pty_test/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -20,14 +22,14 @@
 
 include $(APPDIR)/Make.defs
 
-# Hello, World! built-in application info
+# PTY Test built-in application info
 
 PROGNAME = $(CONFIG_EXAMPLES_PTYTEST_PROGNAME)
 PRIORITY = $(CONFIG_EXAMPLES_PTYTEST_PRIORITY)
 STACKSIZE = $(CONFIG_EXAMPLES_PTYTEST_STACKSIZE)
 MODULE = $(CONFIG_EXAMPLES_PTYTEST)
 
-# PTY Test! Example
+# PTY Test Example
 
 MAINSRC = pty_test.c
 

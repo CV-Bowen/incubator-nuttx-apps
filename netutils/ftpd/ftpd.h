@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/ftpd/ftpd.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -89,8 +91,8 @@ union ftpd_sockaddr_u
 
 struct ftpd_account_s
 {
-  struct ftpd_account_s     *blink;
-  struct ftpd_account_s     *flink;
+  FAR struct ftpd_account_s *blink;
+  FAR struct ftpd_account_s *flink;
   uint8_t                    flags;    /* See FTPD_ACCOUNTFLAG_* definitions */
   FAR char                  *user;     /* User name */
   FAR char                  *password; /* Un-encrypted password */
@@ -103,8 +105,8 @@ struct ftpd_server_s
 {
   int                        sd;     /* Listen socket descriptor */
   union ftpd_sockaddr_u      addr;   /* Listen address */
-  struct ftpd_account_s     *head;   /* Head of a list of accounts */
-  struct ftpd_account_s     *tail;   /* Tail of a list of accounts */
+  FAR struct ftpd_account_s *head;   /* Head of a list of accounts */
+  FAR struct ftpd_account_s *tail;   /* Tail of a list of accounts */
 };
 
 struct ftpd_stream_s
@@ -118,12 +120,12 @@ struct ftpd_stream_s
 
 struct ftpd_session_s
 {
-  FAR struct ftpd_server_s  *server;
-  FAR struct ftpd_account_s *head;
-  bool                       loggedin;
-  uint8_t                    flags;   /* See TPD_SESSIONFLAG_* definitions */
-  int                        rxtimeout;
-  int                        txtimeout;
+  FAR const struct ftpd_server_s  *server;
+  FAR const struct ftpd_account_s *head;
+  bool                             loggedin;
+  uint8_t                          flags;   /* See TPD_SESSIONFLAG_* definitions */
+  int                              rxtimeout;
+  int                              txtimeout;
 
   /* Command */
 
@@ -149,7 +151,7 @@ struct ftpd_session_s
   FAR char                  *renamefrom;
 };
 
-typedef int (*ftpd_cmdhandler_t)(struct ftpd_session_s *);
+typedef int (*ftpd_cmdhandler_t)(FAR struct ftpd_session_s *);
 
 struct ftpd_cmd_s
 {

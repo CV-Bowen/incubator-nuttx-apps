@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/graphics/twm4nx/src/cwindow.cxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -37,11 +39,11 @@
 
 #include <nuttx/config.h>
 
-#include <cfcntl>
 #include <cstring>
 #include <cassert>
 #include <cerrno>
 
+#include <fcntl.h>
 #include <mqueue.h>
 
 #include <nuttx/nx/nxglib.h>
@@ -94,19 +96,15 @@ struct SToolbarInfo
 
 struct SToolbarInfo GToolBarInfo[NTOOLBAR_BUTTONS] =
 {
-  [MENU_BUTTON] =
   {
     &CONFIG_TWM4NX_MENU_IMAGE, false, EVENT_TOOLBAR_MENU
   },
-  [DELETE_BUTTON] =
   {
     &CONFIG_TWM4NX_TERMINATE_IMAGE, true, EVENT_TOOLBAR_TERMINATE
   },
-  [RESIZE_BUTTON] =
   {
     &CONFIG_TWM4NX_RESIZE_IMAGE, true, EVENT_RESIZE_BUTTON
   },
-  [MINIMIZE_BUTTON] =
   {
     &CONFIG_TWM4NX_MINIMIZE_IMAGE, true, EVENT_TOOLBAR_MINIMIZE
   }

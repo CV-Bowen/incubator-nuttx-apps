@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/examples/nxflat/tests/hello++/hello++3.cxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -59,7 +61,7 @@ static CThingSayer MyThingSayer;
 CThingSayer::CThingSayer(void)
 {
   printf("CThingSayer::CThingSayer: I am!\n");
-  szWhatToSay = (const char*)NULL;
+  szWhatToSay = NULL;
 }
 
 CThingSayer::~CThingSayer(void)
@@ -70,7 +72,7 @@ CThingSayer::~CThingSayer(void)
       printf("CThingSayer::~CThingSayer: I will never say '%s' again\n",
   	     szWhatToSay);
     }
-  szWhatToSay = (const char*)NULL;
+  szWhatToSay = NULL;
 }
 
 void CThingSayer::Initialize(const char *czSayThis)

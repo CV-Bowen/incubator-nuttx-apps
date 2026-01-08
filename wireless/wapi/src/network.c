@@ -1,13 +1,10 @@
 /****************************************************************************
  * apps/wireless/wapi/src/network.c
  *
- *   Copyright (C) 2011, 2017 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * Adapted for NuttX from WAPI:
- *
- *   Copyright (c) 2010, Volkan YAZICI <volkan.yazici@gmail.com>
- *   All rights reserved.
+ * SPDX-License-Identifier: BSD-2-Clause
+ * SPDX-FileCopyrightText: 2011, 2017 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2010, Volkan YAZICI <volkan.yazici@gmail.com>
+ * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -90,6 +87,7 @@ static int wapi_set_addr(int sock, FAR const char *ifname, int cmd,
   WAPI_VALIDATE_PTR(addr);
 
   sin.sin_family = AF_INET;
+  sin.sin_port = 0;
   memcpy(&sin.sin_addr, addr, sizeof(struct in_addr));
   memcpy(&ifr.ifr_addr, &sin, sizeof(struct sockaddr_in));
   strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);

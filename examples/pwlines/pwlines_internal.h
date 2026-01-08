@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/pwlines/pwlines_internal.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,6 +32,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <semaphore.h>
+#include <sys/param.h>
 #include <fixedmath.h>
 
 #include <nuttx/nx/nx.h>
@@ -80,7 +83,7 @@
 #    define CONFIG_EXAMPLES_PWLINES_BGCOLOR 0x7b5d
 #  else
 #    define CONFIG_EXAMPLES_PWLINES_BGCOLOR ' '
-# endif
+#  endif
 #endif
 
 #ifndef CONFIG_EXAMPLES_PWLINES_COLOR1
@@ -90,7 +93,7 @@
 #    define CONFIG_EXAMPLES_PWLINES_COLOR1 RGB16_DARKGREEN
 #  else
 #    define CONFIG_EXAMPLES_PWLINES_COLOR1 RGB8_DARKGREEN
-# endif
+#  endif
 #endif
 
 #ifndef CONFIG_EXAMPLES_PWLINES_COLOR2
@@ -100,7 +103,7 @@
 #    define CONFIG_EXAMPLES_PWLINES_COLOR2 RGB16_GREEN
 #  else
 #    define CONFIG_EXAMPLES_PWLINES_COLOR2 RGB8_GREEN
-# endif
+#  endif
 #endif
 
 #ifndef CONFIG_EXAMPLES_PWLINES_COLOR3
@@ -110,7 +113,7 @@
 #    define CONFIG_EXAMPLES_PWLINES_COLOR3 RGB16_LIGHTGREEN
 #  else
 #    define CONFIG_EXAMPLES_PWLINES_COLOR3 RGB8_LIGHTGREEN
-# endif
+#  endif
 #endif
 
 #ifndef CONFIG_EXAMPLES_PWLINES_BORDERWIDTH
@@ -149,15 +152,6 @@
 #  else
 #    define CONFIG_EXAMPLES_PWLINES_LINECOLOR RGB8_GOLD
 #  endif
-#endif
-
-/* Helpers */
-
-#ifndef MIN
-#  define MIN(a,b) ((a) < (b) ? (a) : (b))
-#endif
-#ifndef MAX
-#  define MAX(a,b) ((a) > (b) ? (a) : (b))
 #endif
 
 /****************************************************************************

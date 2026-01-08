@@ -1,6 +1,8 @@
 ############################################################################
 # apps/nshlib/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -23,25 +25,20 @@ include $(APPDIR)/Make.defs
 # NSH Library
 
 CSRCS  = nsh_init.c nsh_parse.c nsh_console.c nsh_script.c nsh_system.c
-CSRCS += nsh_command.c nsh_fscmds.c nsh_ddcmd.c nsh_proccmds.c nsh_mmcmds.c
-CSRCS += nsh_timcmds.c nsh_envcmds.c nsh_syscmds.c nsh_dbgcmds.c
+CSRCS += nsh_command.c nsh_fscmds.c nsh_proccmds.c nsh_mmcmds.c
+CSRCS += nsh_timcmds.c nsh_envcmds.c nsh_syscmds.c nsh_dbgcmds.c nsh_prompt.c
 
-ifeq ($(CONFIG_FILE_STREAM),y)
 CSRCS += nsh_session.c
 ifeq ($(CONFIG_NSH_CONSOLE_LOGIN),y)
 CSRCS += nsh_login.c
-endif
-else
-CSRCS += nsh_stdsession.c
-ifeq ($(CONFIG_NSH_CONSOLE_LOGIN),y)
-CSRCS += nsh_stdlogin.c
-endif
 endif
 
 CSRCS += nsh_fsutils.c
 
 ifeq ($(CONFIG_NSH_BUILTIN_APPS),y)
+ifneq ($(CONFIG_NSH_BUILTIN_AS_COMMAND),y)
 CSRCS += nsh_builtin.c
+endif
 endif
 
 ifeq ($(CONFIG_NSH_FILE_APPS),y)
@@ -50,10 +47,6 @@ endif
 
 ifeq ($(CONFIG_NSH_VARS),y)
 CSRCS += nsh_vars.c
-endif
-
-ifeq ($(CONFIG_NSH_ROMFSETC),y)
-CSRCS += nsh_romfsetc.c
 endif
 
 ifeq ($(CONFIG_NET),y)
@@ -93,6 +86,10 @@ ifneq ($(CONFIG_NSH_DISABLESCRIPT),y)
 CSRCS += nsh_test.c
 endif
 
+ifneq ($(CONFIG_NSH_DISABLE_WAIT),y)
+CSRCS += nsh_wait.c
+endif
+
 ifeq ($(CONFIG_USBDEV),y)
 CSRCS += nsh_usbconsole.c
 endif
@@ -111,6 +108,10 @@ endif
 
 ifeq ($(CONFIG_NSH_LOGIN_PASSWD),y)
 CSRCS += nsh_passwdcmds.c
+endif
+
+ifeq ($(CONFIG_NSH_ALIAS),y)
+CSRCS += nsh_alias.c
 endif
 
 include $(APPDIR)/Application.mk

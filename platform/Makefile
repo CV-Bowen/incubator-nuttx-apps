@@ -1,6 +1,8 @@
 ############################################################################
 # apps/platform/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -25,7 +27,7 @@ CONFIG_ARCH_BOARD ?= dummy
 # Directories
 
 PLATFORMDIR = board
-DUMMYDIR    = $(APPDIR)/platform/dummy
+DUMMYDIR    = $(APPDIR)$(DELIM)platform$(DELIM)dummy
 
 ifeq ($(CONFIG_ARCH_BOARD_CUSTOM),y)
   LINKDIR   = $(DUMMYDIR)

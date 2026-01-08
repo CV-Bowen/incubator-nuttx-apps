@@ -1,14 +1,11 @@
 /****************************************************************************
  * apps/netutils/dhcpc/dhcpc.c
  *
- *   Copyright (C) 2007, 2009, 2011-2012 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * Based heavily on portions of uIP:
- *
- *   Author: Adam Dunkels <adam@dunkels.com>
- *   Copyright (c) 2005, Swedish Institute of Computer Science
- *   All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2007, 2009, 2011-2012 Gregory Nutt.
+ * SPDX-FileCopyrightText: 2005, Swedish Institute of Computer Science
+ * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
+ * SPDX-FileContributor: Adam Dunkels <adam@dunkels.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,6 +53,7 @@
 
 #include <arpa/inet.h>
 #include <netinet/udp.h>
+#include <nuttx/net/ip.h>
 
 #include "netutils/dhcpc.h"
 #include "netutils/netlib.h"
@@ -98,6 +96,9 @@
 #define DHCP_OPTION_MSG_TYPE    53
 #define DHCP_OPTION_SERVER_ID   54
 #define DHCP_OPTION_REQ_LIST    55
+#define DHCP_OPTION_T1_TIME     58
+#define DHCP_OPTION_T2_TIME     59
+#define DHCP_OPTION_CLIENT_ID   61
 #define DHCP_OPTION_END         255
 
 #define BUFFER_SIZE             256
@@ -131,6 +132,7 @@ struct dhcpc_state_s
 {
   FAR const char    *interface;
   int                sockfd;
+  uint8_t            xid[4];
   struct in_addr     ipaddr;
   struct in_addr     serverid;
   struct dhcp_msg    packet;
@@ -144,11 +146,6 @@ struct dhcpc_state_s
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-
-static const uint8_t xid[4] =
-{
-  0xad, 0xde, 0x12, 0x23
-};
 
 static const uint8_t magic_cookie[4] =
 {
@@ -199,6 +196,17 @@ static FAR uint8_t *dhcpc_addreqipaddr(FAR struct in_addr *ipaddr,
   return optptr + 4;
 }
 
+static FAR uint8_t *dhcpc_addclientid(FAR uint8_t *clientid,
+                                      FAR uint8_t len,
+                                      FAR uint8_t *optptr)
+{
+  *optptr++ = DHCP_OPTION_CLIENT_ID;
+  *optptr++ = 1 + len;
+  *optptr++ = 0x1;
+  memcpy(optptr, clientid, len);
+  return optptr + len;
+}
+
 static FAR uint8_t *dhcpc_addreqoptions(FAR uint8_t *optptr)
 {
   *optptr++ = DHCP_OPTION_REQ_LIST;
@@ -222,7 +230,7 @@ static FAR uint8_t *dhcpc_addend(FAR uint8_t *optptr)
 static int dhcpc_sendmsg(FAR struct dhcpc_state_s *pdhcpc,
                          FAR struct dhcpc_state *presult, int msgtype)
 {
-  char hostname[HOST_NAME_MAX];
+  char hostname[HOST_NAME_MAX + 1];
   struct sockaddr_in addr;
   FAR uint8_t *pend;
   in_addr_t serverid = INADDR_BROADCAST;
@@ -234,7 +242,7 @@ static int dhcpc_sendmsg(FAR struct dhcpc_state_s *pdhcpc,
   pdhcpc->packet.op    = DHCP_REQUEST;
   pdhcpc->packet.htype = DHCP_HTYPE_ETHERNET;
   pdhcpc->packet.hlen  = pdhcpc->maclen;
-  memcpy(pdhcpc->packet.xid, xid, 4);
+  memcpy(pdhcpc->packet.xid, pdhcpc->xid, 4);
   memcpy(pdhcpc->packet.chaddr, pdhcpc->macaddr, pdhcpc->maclen);
   memset(&pdhcpc->packet.chaddr[pdhcpc->maclen], 0, 16 - pdhcpc->maclen);
   memcpy(pdhcpc->packet.options, magic_cookie, sizeof(magic_cookie));
@@ -248,7 +256,7 @@ static int dhcpc_sendmsg(FAR struct dhcpc_state_s *pdhcpc,
 
   if (gethostname(hostname, sizeof(hostname)) || (0 == strlen(hostname)))
     {
-      strncpy(hostname, CONFIG_NETUTILS_DHCPC_HOST_NAME, HOST_NAME_MAX);
+      strlcpy(hostname, CONFIG_NETUTILS_DHCPC_HOST_NAME, sizeof(hostname));
     }
 
   /* Handle the message specific settings */
@@ -258,8 +266,12 @@ static int dhcpc_sendmsg(FAR struct dhcpc_state_s *pdhcpc,
       /* Broadcast DISCOVER message to all servers */
 
       case DHCPDISCOVER:
-        /* REVISIT: We don't need the broadcast flag since we can receive
-         * unicast traffic before being fully configured.
+        /* Socket binded to INADDR_ANY is not intended to receive unicast
+         * traffic before being fully configured, at least dhclient
+         * configured with socket-only won't do so on Linux and BSDs.
+         * We can sometimes receive unicast traffic before being fully
+         * configured, it's good, but not always, so we need to set the
+         * broadcast flag under some situations.
          */
 
         /* Broadcast bit. */
@@ -268,14 +280,12 @@ static int dhcpc_sendmsg(FAR struct dhcpc_state_s *pdhcpc,
 
         pend     = dhcpc_addhostname(hostname, pend);
         pend     = dhcpc_addreqoptions(pend);
+        pend     = dhcpc_addclientid(pdhcpc->macaddr, pdhcpc->maclen, pend);
         break;
 
       /* Send REQUEST message to the server that sent the *first* OFFER */
 
       case DHCPREQUEST:
-        /* REVISIT: We don't need the broadcast flag since we can receive
-         * unicast traffic before being fully configured.
-         */
 
         /* Broadcast bit. */
 
@@ -284,6 +294,7 @@ static int dhcpc_sendmsg(FAR struct dhcpc_state_s *pdhcpc,
         pend     = dhcpc_addhostname(hostname, pend);
         pend     = dhcpc_addserverid(&pdhcpc->serverid, pend);
         pend     = dhcpc_addreqipaddr(&pdhcpc->ipaddr, pend);
+        pend     = dhcpc_addclientid(pdhcpc->macaddr, pdhcpc->maclen, pend);
         break;
 
       /* Send DECLINE message to the server that sent the *last* OFFER */
@@ -294,7 +305,18 @@ static int dhcpc_sendmsg(FAR struct dhcpc_state_s *pdhcpc,
         serverid = presult->serverid.s_addr;
         break;
 
+      /* Send RELEASE message to the server to relinquish the lease */
+
+      case DHCPRELEASE:
+
+        memcpy(pdhcpc->packet.ciaddr, &presult->ipaddr.s_addr, 4);
+        pend     = dhcpc_addserverid(&presult->serverid, pend);
+        pend     = dhcpc_addclientid(pdhcpc->macaddr, pdhcpc->maclen, pend);
+        serverid = presult->serverid.s_addr;
+        break;
+
       default:
+        errno = EINVAL;
         return ERROR;
     }
 
@@ -320,6 +342,7 @@ static uint8_t dhcpc_parseoptions(FAR struct dhcpc_state *presult,
 {
   FAR uint8_t *end = optptr + len;
   uint8_t type = 0;
+  uint16_t tmp[2];
 
   while (optptr < end)
     {
@@ -355,11 +378,32 @@ static uint8_t dhcpc_parseoptions(FAR struct dhcpc_state *presult,
 
           case DHCP_OPTION_DNS_SERVER:
 
-            /* Get the DNS server address in network order */
+            /* Get the DNS server addresses in network order.
+             * DHCP option 6 can contain multiple DNS server addresses,
+             * each 4 bytes long.
+             */
 
-            if (optptr + 6 <= end)
+            if (optptr + 2 <= end)
               {
-                memcpy(&presult->dnsaddr.s_addr, optptr + 2, 4);
+                uint8_t optlen = *(optptr + 1);
+                uint8_t num_dns = optlen / 4;
+                uint8_t i;
+
+                /* Limit to configured maximum */
+
+                if (num_dns > CONFIG_NETDB_DNSSERVER_NAMESERVERS)
+                  {
+                    num_dns = CONFIG_NETDB_DNSSERVER_NAMESERVERS;
+                  }
+
+                presult->num_dnsaddr = 0;
+                for (i = 0; i < num_dns && (optptr + 2 + i * 4 + 4) <= end;
+                     i++)
+                  {
+                    memcpy(&presult->dnsaddr[i].s_addr, optptr + 2 + i * 4,
+                           4);
+                    presult->num_dnsaddr++;
+                  }
               }
             else
               {
@@ -401,7 +445,6 @@ static uint8_t dhcpc_parseoptions(FAR struct dhcpc_state *presult,
 
             if (optptr + 6 <= end)
               {
-                uint16_t tmp[2];
                 memcpy(tmp, optptr + 2, 4);
                 presult->lease_time = ((uint32_t)ntohs(tmp[0])) << 16 |
                                        (uint32_t)ntohs(tmp[1]);
@@ -409,6 +452,38 @@ static uint8_t dhcpc_parseoptions(FAR struct dhcpc_state *presult,
             else
               {
                 nerr("Packet too short (lease time missing)\n");
+              }
+            break;
+
+          case DHCP_OPTION_T1_TIME:
+
+              /* Get renewal (T1) time (in seconds) in host order */
+
+            if (optptr + 6 <= end)
+              {
+                memcpy(tmp, optptr + 2, 4);
+                presult->renewal_time = ((uint32_t)ntohs(tmp[0])) << 16 |
+                                         (uint32_t)ntohs(tmp[1]);
+              }
+            else
+              {
+                nerr("Packet too short (renewal time missing)\n");
+              }
+            break;
+
+          case DHCP_OPTION_T2_TIME:
+
+              /* Get rebinding (T2) time (in seconds) in host order */
+
+            if (optptr + 6 <= end)
+              {
+                memcpy(tmp, optptr + 2, 4);
+                presult->rebinding_time = ((uint32_t)ntohs(tmp[0])) << 16 |
+                                           (uint32_t)ntohs(tmp[1]);
+              }
+            else
+              {
+                nerr("Packet too short (rebinding time missing)\n");
               }
             break;
 
@@ -435,7 +510,7 @@ static uint8_t dhcpc_parsemsg(FAR struct dhcpc_state_s *pdhcpc, int buflen,
                               FAR struct dhcpc_state *presult)
 {
   if (buflen >= 44 && pdhcpc->packet.op == DHCP_REPLY &&
-      memcmp(pdhcpc->packet.xid, xid, sizeof(xid)) == 0 &&
+      memcmp(pdhcpc->packet.xid, pdhcpc->xid, 4) == 0 &&
       memcmp(pdhcpc->packet.chaddr,
              pdhcpc->macaddr, pdhcpc->maclen) == 0)
     {
@@ -520,13 +595,21 @@ FAR void *dhcpc_open(FAR const char *interface, FAR const void *macaddr,
       /* Initialize the allocated structure */
 
       memset(pdhcpc, 0, sizeof(struct dhcpc_state_s));
+
+      /* RFC2131: A DHCP client MUST choose 'xid's in such a
+       * way as to minimize the chance of using an 'xid' identical to one
+       * used by another client.
+       */
+
+      arc4random_buf(pdhcpc->xid, 4);
+
       pdhcpc->interface = interface;
       pdhcpc->maclen    = maclen;
       memcpy(pdhcpc->macaddr, macaddr, pdhcpc->maclen);
 
       /* Create a UDP socket */
 
-      pdhcpc->sockfd = socket(PF_INET, SOCK_DGRAM, 0);
+      pdhcpc->sockfd = socket(PF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
       if (pdhcpc->sockfd < 0)
         {
           ninfo("socket handle %d\n", pdhcpc->sockfd);
@@ -552,8 +635,8 @@ FAR void *dhcpc_open(FAR const char *interface, FAR const void *macaddr,
 
       /* Configure for read timeouts */
 
-      tv.tv_sec  = CONFIG_NETUTILS_DHCPC_RECV_TIMEOUT;
-      tv.tv_usec = 0;
+      tv.tv_sec  = CONFIG_NETUTILS_DHCPC_RECV_TIMEOUT_MS / 1000;
+      tv.tv_usec = (CONFIG_NETUTILS_DHCPC_RECV_TIMEOUT_MS % 1000) * 1000;
 
       ret = setsockopt(pdhcpc->sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv,
                        sizeof(struct timeval));
@@ -565,14 +648,14 @@ FAR void *dhcpc_open(FAR const char *interface, FAR const void *macaddr,
           return NULL;
         }
 
-#ifdef CONFIG_NET_UDP_BINDTODEVICE
+#ifdef CONFIG_NET_BINDTODEVICE
       /* Bind socket to interface, because UDP packets have to be sent to the
        * broadcast address at a moment when it is not possible to decide the
        * target network device using the local or remote address (which is,
        * by definition and purpose of DHCP, undefined yet).
        */
 
-      ret = setsockopt(pdhcpc->sockfd, IPPROTO_UDP, UDP_BINDTODEVICE,
+      ret = setsockopt(pdhcpc->sockfd, SOL_SOCKET, SO_BINDTODEVICE,
                        pdhcpc->interface, strlen(pdhcpc->interface));
       if (ret < 0)
         {
@@ -659,21 +742,27 @@ int dhcpc_request(FAR void *handle, FAR struct dhcpc_state *presult)
 {
   FAR struct dhcpc_state_s *pdhcpc = (FAR struct dhcpc_state_s *)handle;
   struct in_addr oldaddr;
-  struct in_addr newaddr;
   ssize_t result;
   uint8_t msgtype;
   int     retries;
   int     state;
+  clock_t start;
 
-  /* Save the currently assigned IP address (should be INADDR_ANY) */
+  memset(presult, 0, sizeof(*presult));
+
+  /* RFC2131: For example, a client may choose a different,
+   * random initial 'xid' each time the client is rebooted, and
+   * subsequently use sequential 'xid's until the next reboot.
+   */
+
+  pdhcpc->xid[3]++;
+
+  /* Save the currently assigned IP address. It should be INADDR_ANY
+   * if this is the initial request, or a valid IP if this is a renewal.
+   */
 
   oldaddr.s_addr = 0;
   netlib_get_ipv4addr(pdhcpc->interface, &oldaddr);
-
-  /* Set the IP address to INADDR_ANY. */
-
-  newaddr.s_addr = INADDR_ANY;
-  netlib_set_ipv4addr(pdhcpc->interface, &newaddr);
 
   /* Loop sending the DISCOVER up to CONFIG_NETUTILS_DHCPC_RETRIES
    * times
@@ -692,6 +781,7 @@ int dhcpc_request(FAR void *handle, FAR struct dhcpc_state *presult)
     {
       if (pdhcpc->cancel)
         {
+          errno = EINTR;
           return ERROR;
         }
 
@@ -707,48 +797,54 @@ int dhcpc_request(FAR void *handle, FAR struct dhcpc_state *presult)
 
       /* Get the DHCPOFFER response */
 
-      result = recv(pdhcpc->sockfd, &pdhcpc->packet,
-                    sizeof(struct dhcp_msg), 0);
-      if (result >= 0)
+      start = clock();
+      do
         {
-          msgtype = dhcpc_parsemsg(pdhcpc, result, presult);
-          if (msgtype == DHCPOFFER)
+          result = recv(pdhcpc->sockfd, &pdhcpc->packet,
+                        sizeof(struct dhcp_msg), 0);
+          if (result >= 0)
             {
-              /* Save the servid from the presult so that it is not
-               * clobbered by a new OFFER.
-               */
+              msgtype = dhcpc_parsemsg(pdhcpc, result, presult);
+              if (msgtype == DHCPOFFER)
+                {
+                  /* Save the servid from the presult so that it is not
+                   * clobbered by a new OFFER.
+                   */
 
-              ninfo("Received OFFER from %08" PRIx32 "\n",
-                    (uint32_t)ntohl(presult->serverid.s_addr));
-              pdhcpc->ipaddr.s_addr   = presult->ipaddr.s_addr;
-              pdhcpc->serverid.s_addr = presult->serverid.s_addr;
+                  ninfo("Received OFFER from %08" PRIx32 "\n",
+                        (uint32_t)ntohl(presult->serverid.s_addr));
+                  pdhcpc->ipaddr.s_addr   = presult->ipaddr.s_addr;
+                  pdhcpc->serverid.s_addr = presult->serverid.s_addr;
 
-              /* Temporarily use the address offered by the server
-               * and break out of the loop.
-               */
+                  /* Temporarily use the address offered by the server
+                   * and break out of the loop.
+                   */
 
-              netlib_set_ipv4addr(pdhcpc->interface,
-                                  &presult->ipaddr);
-              state = STATE_HAVE_OFFER;
+                  netlib_set_ipv4addr(pdhcpc->interface,
+                                      &presult->ipaddr);
+                  state = STATE_HAVE_OFFER;
+                }
+            }
+
+          /* An error has occurred.  If this was a timeout error (meaning
+           * that nothing was received on this socket for a long period
+           * of time). Then loop and send the DISCOVER command again.
+           */
+
+          else if (errno != EAGAIN && errno != EINTR)
+            {
+              /* An error other than a timeout was received -- error out */
+
+              return ERROR;
             }
         }
-
-      /* An error has occurred.  If this was a timeout error (meaning
-       * that nothing was received on this socket for a long period
-       * of time). Then loop and send the DISCOVER command again.
-       */
-
-      else if (errno != EAGAIN)
-        {
-          /* An error other than a timeout was received -- error out */
-
-          return ERROR;
-        }
+      while (state == STATE_INITIAL && TICK2MSEC(clock() - start) <
+             CONFIG_NETUTILS_DHCPC_RECV_TIMEOUT_MS);
     }
   while (state == STATE_INITIAL &&
          retries < CONFIG_NETUTILS_DHCPC_RETRIES);
 
-  /* If no DHCPOFFER recveived here, error out */
+  /* If no DHCPOFFER received here, error out */
 
   if (state == STATE_INITIAL)
     {
@@ -764,6 +860,7 @@ int dhcpc_request(FAR void *handle, FAR struct dhcpc_state *presult)
     {
       if (pdhcpc->cancel)
         {
+          errno = EINTR;
           return ERROR;
         }
 
@@ -781,98 +878,116 @@ int dhcpc_request(FAR void *handle, FAR struct dhcpc_state *presult)
 
       /* Get the ACK/NAK response to the REQUEST (or timeout) */
 
-      result = recv(pdhcpc->sockfd, &pdhcpc->packet,
-                    sizeof(struct dhcp_msg), 0);
-      if (result >= 0)
+      start = clock();
+      do
         {
-          /* Parse the response */
-
-          msgtype = dhcpc_parsemsg(pdhcpc, result, presult);
-
-          /* The ACK response means that the server has accepted
-           * our request and we have the lease.
-           */
-
-          if (msgtype == DHCPACK)
+          result = recv(pdhcpc->sockfd, &pdhcpc->packet,
+                        sizeof(struct dhcp_msg), 0);
+          if (result >= 0)
             {
-              ninfo("Received ACK\n");
-              state = STATE_HAVE_LEASE;
+              /* Parse the response */
+
+              msgtype = dhcpc_parsemsg(pdhcpc, result, presult);
+
+              /* The ACK response means that the server has accepted
+               * our request and we have the lease.
+               */
+
+              if (msgtype == DHCPACK)
+                {
+                  ninfo("Received ACK\n");
+                  state = STATE_HAVE_LEASE;
+                }
+
+              /* NAK means the server has refused our request */
+
+              else if (msgtype == DHCPNAK)
+                {
+                  ninfo("Received NAK\n");
+                  oldaddr.s_addr = INADDR_ANY;
+                  netlib_set_ipv4addr(pdhcpc->interface, &oldaddr);
+                  errno = ECONNREFUSED;
+                  return ERROR;
+                }
+
+              /* If we get any OFFERs from other servers, then decline
+               * them now and continue waiting for the ACK from the server
+               * that we requested from.
+               */
+
+              else if (msgtype == DHCPOFFER &&
+                       pdhcpc->serverid.s_addr != presult->serverid.s_addr)
+                {
+                  ninfo("Received another OFFER, send DECLINE\n");
+                  dhcpc_sendmsg(pdhcpc, presult, DHCPDECLINE);
+                }
+
+              /* Otherwise, it is something that we do not recognize */
+
+              else
+                {
+                  ninfo("Ignoring msgtype=%d\n", msgtype);
+                }
             }
 
-          /* NAK means the server has refused our request.  Break out of
-           * this loop with state == STATE_HAVE_OFFER and send DISCOVER
-           * again
+          /* An error has occurred.  If this was a timeout error (meaning
+           * that nothing was received on this socket for a long period of
+           * time). Then break out and send the DISCOVER command again
+           * (at most 3 times).
            */
 
-          else if (msgtype == DHCPNAK)
+          else if (errno != EAGAIN && errno != EINTR)
             {
-              ninfo("Received NAK\n");
-              break;
-            }
+              /* An error other than a timeout was received */
 
-          /* If we get any OFFERs from other servers, then decline
-           * them now and continue waiting for the ACK from the server
-           * that we requested from.
-           */
-
-          else if (msgtype == DHCPOFFER)
-            {
-              ninfo("Received another OFFER, send DECLINE\n");
-              dhcpc_sendmsg(pdhcpc, presult, DHCPDECLINE);
-            }
-
-          /* Otherwise, it is something that we do not recognize */
-
-          else
-            {
-              ninfo("Ignoring msgtype=%d\n", msgtype);
+              netlib_set_ipv4addr(pdhcpc->interface, &oldaddr);
+              return ERROR;
             }
         }
-
-      /* An error has occurred.  If this was a timeout error (meaning
-       * that nothing was received on this socket for a long period of
-       * time). Then break out and send the DISCOVER command again
-       * (at most 3 times).
-       */
-
-      else if (errno != EAGAIN)
-        {
-          /* An error other than a timeout was received */
-
-          netlib_set_ipv4addr(pdhcpc->interface, &oldaddr);
-          return ERROR;
-        }
+      while (state == STATE_HAVE_OFFER && TICK2MSEC(clock() - start) <
+             CONFIG_NETUTILS_DHCPC_RECV_TIMEOUT_MS);
     }
   while (state == STATE_HAVE_OFFER &&
          retries < CONFIG_NETUTILS_DHCPC_RETRIES);
 
-  /* If no DHCPLEASE recveived here, error out */
+  /* If no DHCPLEASE received here, error out */
 
   if (state != STATE_HAVE_LEASE)
     {
       return ERROR;
     }
 
-  ninfo("Got IP address %d.%d.%d.%d\n",
-        (int)((presult->ipaddr.s_addr)       & 0xff),
-        (int)((presult->ipaddr.s_addr >> 8)  & 0xff),
-        (int)((presult->ipaddr.s_addr >> 16) & 0xff),
-        (int)((presult->ipaddr.s_addr >> 24) & 0xff));
-  ninfo("Got netmask %d.%d.%d.%d\n",
-        (int)((presult->netmask.s_addr)       & 0xff),
-        (int)((presult->netmask.s_addr >> 8)  & 0xff),
-        (int)((presult->netmask.s_addr >> 16) & 0xff),
-        (int)((presult->netmask.s_addr >> 24) & 0xff));
-  ninfo("Got DNS server %d.%d.%d.%d\n",
-        (int)((presult->dnsaddr.s_addr)       & 0xff),
-        (int)((presult->dnsaddr.s_addr >> 8)  & 0xff),
-        (int)((presult->dnsaddr.s_addr >> 16) & 0xff),
-        (int)((presult->dnsaddr.s_addr >> 24) & 0xff));
-  ninfo("Got default router %d.%d.%d.%d\n",
-        (int)((presult->default_router.s_addr)       & 0xff),
-        (int)((presult->default_router.s_addr >> 8)  & 0xff),
-        (int)((presult->default_router.s_addr >> 16) & 0xff),
-        (int)((presult->default_router.s_addr >> 24) & 0xff));
+  ninfo("Got IP address %u.%u.%u.%u\n",
+        ip4_addr1(presult->ipaddr.s_addr),
+        ip4_addr2(presult->ipaddr.s_addr),
+        ip4_addr3(presult->ipaddr.s_addr),
+        ip4_addr4(presult->ipaddr.s_addr));
+  ninfo("Got netmask %u.%u.%u.%u\n",
+        ip4_addr1(presult->netmask.s_addr),
+        ip4_addr2(presult->netmask.s_addr),
+        ip4_addr3(presult->netmask.s_addr),
+        ip4_addr4(presult->netmask.s_addr));
+
+  /* Print all DNS servers received */
+
+  if (presult->num_dnsaddr > 0)
+    {
+      uint8_t i;
+      for (i = 0; i < presult->num_dnsaddr; i++)
+        {
+          ninfo("Got DNS server %d: %u.%u.%u.%u\n", i,
+                ip4_addr1(presult->dnsaddr[i].s_addr),
+                ip4_addr2(presult->dnsaddr[i].s_addr),
+                ip4_addr3(presult->dnsaddr[i].s_addr),
+                ip4_addr4(presult->dnsaddr[i].s_addr));
+        }
+    }
+
+  ninfo("Got default router %u.%u.%u.%u\n",
+        ip4_addr1(presult->default_router.s_addr),
+        ip4_addr2(presult->default_router.s_addr),
+        ip4_addr3(presult->default_router.s_addr),
+        ip4_addr4(presult->default_router.s_addr));
   ninfo("Lease expires in %" PRId32 " seconds\n", presult->lease_time);
   return OK;
 }
@@ -888,22 +1003,127 @@ int dhcpc_request_async(FAR void *handle, dhcpc_callback_t callback)
 
   if (!handle || !callback)
     {
+      errno = EINVAL;
       return ERROR;
     }
 
   if (pdhcpc->thread)
     {
       nerr("ERROR: DHCPC thread already running\n");
+      errno = EALREADY;
       return ERROR;
     }
 
   pdhcpc->callback = callback;
+  pdhcpc->cancel   = 0;
   ret = pthread_create(&pdhcpc->thread, NULL, dhcpc_run, pdhcpc);
   if (ret != 0)
     {
       nerr("ERROR: Failed to start the DHCPC thread\n");
+      errno = ret;
       return ERROR;
     }
 
+  return OK;
+}
+
+/****************************************************************************
+ * Name: dhcpc_release
+ ****************************************************************************/
+
+int dhcpc_release(FAR void *handle, FAR struct dhcpc_state *presult)
+{
+  FAR struct dhcpc_state_s *pdhcpc = (FAR struct dhcpc_state_s *)handle;
+  int ret;
+  int retries = 0;
+#ifdef CONFIG_NETUTILS_DHCPC_RELEASE_CLEAR_IP
+  struct in_addr zero_addr;
+#endif
+
+  if (!handle || !presult)
+    {
+      errno = EINVAL;
+      return ERROR;
+    }
+
+  /* Check that we have valid IP address and server ID to release */
+
+  if (presult->ipaddr.s_addr == 0 || presult->serverid.s_addr == 0)
+    {
+      errno = EINVAL;
+      return ERROR;
+    }
+
+  /* Increment transaction ID for the release message */
+
+  pdhcpc->xid[3]++;
+
+  /* Send DHCPRELEASE message to the server with retry mechanism.
+   * According to RFC 2131, no response is expected from the server.
+   */
+
+  for (; ; )
+    {
+      ret = dhcpc_sendmsg(pdhcpc, presult, DHCPRELEASE);
+      if (ret > 0)
+        {
+          ninfo("DHCPRELEASE message sent successfully (%d bytes)\n", ret);
+          break;
+        }
+      else
+        {
+          retries++;
+          nerr("Failed send DHCPRELEASE (attempt %d/%d), ret=%d, errno=%d\n",
+               retries, CONFIG_NETUTILS_DHCPC_RELEASE_RETRIES, ret, errno);
+
+          if (retries >= CONFIG_NETUTILS_DHCPC_RELEASE_RETRIES)
+            {
+              nerr("ERROR: Failed to send DHCPRELEASE after %d attempts\n",
+                    CONFIG_NETUTILS_DHCPC_RELEASE_RETRIES);
+              return ERROR;
+            }
+
+          usleep(1000 * CONFIG_NETUTILS_DHCPC_RELEASE_TRANSMISSION_DELAY_MS);
+        }
+    }
+
+#ifdef CONFIG_NETUTILS_DHCPC_RELEASE_ENSURE_TRANSMISSION
+  /* Ensure the DHCPRELEASE packet has time to be transmitted.
+   * Since DHCP RELEASE has no ACK response and UDP is connectionless,
+   * we use a delay to give the network stack time to actually send
+   * the packet before the function returns.
+   */
+
+  usleep(1000 * CONFIG_NETUTILS_DHCPC_RELEASE_TRANSMISSION_DELAY_MS);
+#endif
+
+#ifdef CONFIG_NETUTILS_DHCPC_RELEASE_CLEAR_IP
+  /* Clear all network configuration that was obtained via DHCP */
+
+  zero_addr.s_addr = INADDR_ANY;
+
+  ret = netlib_set_ipv4addr(pdhcpc->interface, &zero_addr);
+  if (ret < 0)
+    {
+      nwarn("Warning: Failed clear IP address from interface (errno=%d)\n",
+             errno);
+    }
+
+  ret = netlib_set_ipv4netmask(pdhcpc->interface, &zero_addr);
+  if (ret < 0)
+    {
+      nwarn("Warning: Failed clear netmask from interface (errno=%d)\n",
+             errno);
+    }
+
+  ret = netlib_set_dripv4addr(pdhcpc->interface, &zero_addr);
+  if (ret < 0)
+    {
+      nwarn("Warning: Failed clear gateway from interface (errno=%d)\n",
+             errno);
+    }
+#endif
+
+  ninfo("DHCP released successfully\n");
   return OK;
 }

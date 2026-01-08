@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/system/uniqueid/uniqueid_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -37,11 +39,11 @@
 
 struct cfg_s
 {
-  const FAR char *delim;
-  const FAR char *format;
+  FAR const char *format;
+  FAR const char *delim;
   uint8_t positions[CONFIG_BOARDCTL_UNIQUEID_SIZE];
   size_t count;
-  const FAR char *prefix;
+  FAR const char *prefix;
 };
 
 /****************************************************************************
@@ -51,11 +53,11 @@ struct cfg_s
 static int parse_positions(FAR char *arg, FAR uint8_t *positions,
                            FAR size_t *count)
 {
-  char *list_save;
-  char *list_item;
-  char *range_save;
-  char *range_item;
-  char *endptr;
+  FAR char *list_save;
+  FAR char *list_item;
+  FAR char *range_save;
+  FAR char *range_item;
+  FAR char *endptr;
   int pos;
   int pos2;
 
@@ -227,12 +229,14 @@ static int parsearg(int argc, FAR char *argv[], FAR struct cfg_s *cfg)
 int main(int argc, FAR char *argv[])
 {
   uint8_t uniqueid[CONFIG_BOARDCTL_UNIQUEID_SIZE];
-  char *formatter;
+  FAR char *formatter;
+  size_t len;
   int i;
 
-  struct cfg_s cfg = {
-    .format = "02x",
-  };
+  struct cfg_s cfg =
+    {
+      "02x"
+    };
 
   if (parsearg(argc, argv, &cfg) != 0)
     {
@@ -257,8 +261,9 @@ int main(int argc, FAR char *argv[])
       return -1;
     }
 
-  formatter = malloc(strlen(cfg.format) + 2);
-  sprintf(formatter, "%%%s", cfg.format);
+  len = strlen(cfg.format) + 2;
+  formatter = malloc(len);
+  snprintf(formatter, len, "%%%s", cfg.format);
 
   if (cfg.prefix != NULL)
     {

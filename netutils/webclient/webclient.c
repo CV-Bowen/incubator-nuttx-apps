@@ -1,16 +1,13 @@
 /****************************************************************************
  * apps/netutils/webclient/webclient.c
- * Implementation of the HTTP client.
  *
- *   Copyright (C) 2007, 2009, 2011-2012, 2014, 2020 Gregory Nutt.
- *   All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * Based on uIP which also has a BSD style license:
- *
- *   Author: Adam Dunkels <adam@dunkels.com>
- *   Copyright (c) 2002, Adam Dunkels.
- *   All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2014, 2020 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2011-2012 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2007, 2009 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2002 Adam Dunkels. All rights reserved.
+ * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
+ * SPDX-FileContributor: Adam Dunkels <adam@dunkels.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -133,11 +130,11 @@
 #define CONN_WANT_WRITE WEBCLIENT_POLL_INFO_WANT_WRITE
 
 #ifdef CONFIG_DEBUG_ASSERTIONS
-#define	_CHECK_STATE(ctx, s)	DEBUGASSERT((ctx)->state == (s))
-#define	_SET_STATE(ctx, s)		ctx->state = (s)
+#define _CHECK_STATE(ctx, s) DEBUGASSERT((ctx)->state == (s))
+#define _SET_STATE(ctx, s)   ctx->state = (s)
 #else
-#define	_CHECK_STATE(ctx, s)	do {} while (0)
-#define	_SET_STATE(ctx, s)		do {} while (0)
+#define _CHECK_STATE(ctx, s) do {} while (0)
+#define _SET_STATE(ctx, s)   do {} while (0)
 #endif
 
 /****************************************************************************
@@ -161,26 +158,22 @@ enum webclient_state_e
     WEBCLIENT_STATE_WAIT_CLOSE,
     WEBCLIENT_STATE_CLOSE,
     WEBCLIENT_STATE_DONE,
+    WEBCLIENT_STATE_TUNNEL_ESTABLISHED,
   };
-
-struct conn_s
-{
-  bool tls;
-
-  /* for !tls */
-
-  int sockfd;
-  unsigned int flags;
-
-  /* for tls */
-
-  struct webclient_tls_connection *tls_conn;
-};
 
 /* flags for wget_s::internal_flags */
 
-#define	WGET_FLAG_GOT_CONTENT_LENGTH 1U
-#define	WGET_FLAG_CHUNKED            2U
+#define WGET_FLAG_GOT_CONTENT_LENGTH 1U
+#define WGET_FLAG_CHUNKED            2U
+#define WGET_FLAG_GOT_LOCATION       4U
+
+struct wget_target_s
+{
+  char scheme[sizeof("https") + 1];
+  char hostname[CONFIG_WEBCLIENT_MAXHOSTNAME];
+  char filename[CONFIG_WEBCLIENT_MAXFILENAME];
+  uint16_t port;     /* The port number to use in the connection */
+};
 
 struct wget_s
 {
@@ -188,8 +181,6 @@ struct wget_s
 
   enum webclient_state_e state;
   uint8_t httpstatus;
-
-  uint16_t port;     /* The port number to use in the connection */
 
   /* These describe the just-received buffer of data */
 
@@ -214,12 +205,12 @@ struct wget_s
 #ifdef CONFIG_WEBCLIENT_GETMIMETYPE
   char mimetype[CONFIG_WEBCLIENT_MAXMIMESIZE];
 #endif
-  char scheme[sizeof("https") + 1];
-  char hostname[CONFIG_WEBCLIENT_MAXHOSTNAME];
-  char filename[CONFIG_WEBCLIENT_MAXFILENAME];
+
+  struct wget_target_s target;
+  struct wget_target_s proxy;
 
   bool need_conn_close;
-  struct conn_s conn;
+  struct webclient_conn_s *conn;
   unsigned int nredirect;
   int redirected;
 
@@ -229,6 +220,8 @@ struct wget_s
   size_t state_len;
   FAR const void *data_buffer;
   size_t data_len;
+
+  FAR struct webclient_context *tunnel;
 };
 
 /****************************************************************************
@@ -265,87 +258,18 @@ static const char g_httpcache[]      = "Cache-Control: no-cache";
  ****************************************************************************/
 
 /****************************************************************************
- * Name: conn_send
+ * Name: free_ws
  ****************************************************************************/
 
-static ssize_t conn_send(struct webclient_context *ctx, struct conn_s *conn,
-                         const void *buffer, size_t len)
+static void free_ws(FAR struct wget_s *ws)
 {
-  if (conn->tls)
+  if (ws->conn != NULL)
     {
-      return ctx->tls_ops->send(ctx->tls_ctx, conn->tls_conn, buffer, len);
+      webclient_conn_free(ws->conn);
     }
 
-  while (true)
-    {
-      ssize_t ret = send(conn->sockfd, buffer, len, 0);
-      if (ret == -1)
-        {
-          if (errno == EINTR)
-            {
-              continue;
-            }
-
-          if (errno == EAGAIN)
-            {
-              conn->flags |= CONN_WANT_WRITE;
-            }
-
-          return -errno;
-        }
-
-      return ret;
-    }
-}
-
-/****************************************************************************
- * Name: conn_recv
- ****************************************************************************/
-
-static ssize_t conn_recv(struct webclient_context *ctx, struct conn_s *conn,
-                         void *buffer, size_t len)
-{
-  if (conn->tls)
-    {
-      return ctx->tls_ops->recv(ctx->tls_ctx, conn->tls_conn, buffer, len);
-    }
-
-  while (true)
-    {
-      ssize_t ret = recv(conn->sockfd, buffer, len, 0);
-      if (ret == -1)
-        {
-          if (errno == EINTR)
-            {
-              continue;
-            }
-
-          if (errno == EAGAIN)
-            {
-              conn->flags |= CONN_WANT_READ;
-            }
-
-          return -errno;
-        }
-
-      return ret;
-    }
-}
-
-/****************************************************************************
- * Name: conn_close
- ****************************************************************************/
-
-static void conn_close(struct webclient_context *ctx, struct conn_s *conn)
-{
-  if (conn->tls)
-    {
-      ctx->tls_ops->close(ctx->tls_ctx, conn->tls_conn);
-    }
-  else
-    {
-      close(conn->sockfd);
-    }
+  free(ws->tunnel);
+  free(ws);
 }
 
 /****************************************************************************
@@ -358,6 +282,7 @@ static int webclient_static_body_func(FAR void *buffer,
                                       size_t reqsize,
                                       FAR void *ctx)
 {
+  UNUSED(buffer);
   *datap = ctx;
   *sizep = reqsize;
   return 0;
@@ -480,6 +405,16 @@ static inline int wget_parsestatus(struct webclient_context *ctx,
               return -E2BIG;
             }
 
+          /* HTTP status line is something like:
+           *
+           * HTTP/1.1 200 OK
+           *
+           * https://datatracker.ietf.org/doc/html/rfc7230#section-3.1.2
+           *
+           * > status-line = HTTP-version SP status-code \
+           * >               SP reason-phrase CRLF
+           */
+
           ws->line[ndx] = '\0';
           if ((strncmp(ws->line, g_http10, strlen(g_http10)) == 0) ||
               (strncmp(ws->line, g_http11, strlen(g_http11)) == 0))
@@ -487,7 +422,17 @@ static inline int wget_parsestatus(struct webclient_context *ctx,
               unsigned long http_status;
               char *ep;
 
-              dest = &(ws->line[9]);
+              DEBUGASSERT(strlen(g_http10) == 8);
+              DEBUGASSERT(strlen(g_http11) == 8);
+
+              /* SP before the status-code */
+
+              if (ws->line[8] != ' ')
+                {
+                  return -EINVAL;
+                }
+
+              dest = &(ws->line[9]);  /* the status-code */
               ws->httpstatus = HTTPSTATUS_NONE;
 
               errno = 0;
@@ -496,6 +441,8 @@ static inline int wget_parsestatus(struct webclient_context *ctx,
                 {
                   return -EINVAL;
                 }
+
+              /* SP before reason-phrase */
 
               if (*ep != ' ')
                 {
@@ -511,10 +458,9 @@ static inline int wget_parsestatus(struct webclient_context *ctx,
               ninfo("Got HTTP status %lu\n", http_status);
               if (ctx->http_reason != NULL)
                 {
-                  strncpy(ctx->http_reason,
+                  strlcpy(ctx->http_reason,
                           ep + 1,
-                          ctx->http_reason_len - 1);
-                  ctx->http_reason[ctx->http_reason_len - 1] = 0;
+                          ctx->http_reason_len);
                 }
 
               /* Check for 2xx (Successful) */
@@ -549,7 +495,9 @@ static inline int wget_parsestatus(struct webclient_context *ctx,
            */
 
           ws->state = WEBCLIENT_STATE_HEADERS;
-          ws->internal_flags &= ~WGET_FLAG_CHUNKED;
+          ws->internal_flags &= ~(WGET_FLAG_GOT_CONTENT_LENGTH |
+                                  WGET_FLAG_CHUNKED |
+                                  WGET_FLAG_GOT_LOCATION);
           ndx = 0;
           break;
         }
@@ -568,18 +516,19 @@ static inline int wget_parsestatus(struct webclient_context *ctx,
  * Name: parseurl
  ****************************************************************************/
 
-static int parseurl(FAR const char *url, FAR struct wget_s *ws)
+static int parseurl(FAR const char *url, FAR struct wget_target_s *targ,
+                    bool require_port)
 {
   struct url_s url_s;
   int ret;
 
   memset(&url_s, 0, sizeof(url_s));
-  url_s.scheme = ws->scheme;
-  url_s.schemelen = sizeof(ws->scheme);
-  url_s.host = ws->hostname;
-  url_s.hostlen = sizeof(ws->hostname);
-  url_s.path = ws->filename;
-  url_s.pathlen = sizeof(ws->filename);
+  url_s.scheme = targ->scheme;
+  url_s.schemelen = sizeof(targ->scheme);
+  url_s.host = targ->hostname;
+  url_s.hostlen = sizeof(targ->hostname);
+  url_s.path = targ->filename;
+  url_s.pathlen = sizeof(targ->filename);
   ret = netlib_parseurl(url, &url_s);
   if (ret < 0)
     {
@@ -588,18 +537,23 @@ static int parseurl(FAR const char *url, FAR struct wget_s *ws)
 
   if (url_s.port == 0)
     {
-      if (!strcmp(ws->scheme, "https"))
+      if (require_port)
         {
-          ws->port = 443;
+          return -EINVAL;
+        }
+
+      if (!strcmp(targ->scheme, "https"))
+        {
+          targ->port = 443;
         }
       else
         {
-          ws->port = 80;
+          targ->port = 80;
         }
     }
   else
     {
-      ws->port = url_s.port;
+      targ->port = url_s.port;
     }
 
   return 0;
@@ -645,7 +599,10 @@ static inline int wget_parseheaders(struct webclient_context *ctx,
            */
 
           found = false;
-          if (ndx > 0) /* Should always be true */
+
+          /* Should always be true */
+
+          if (ndx > 0)
             {
               ninfo("Got HTTP header line%s: %.*s\n",
                     got_nl ? "" : " (truncated)",
@@ -665,7 +622,24 @@ static inline int wget_parseheaders(struct webclient_context *ctx,
                     }
                   else
                     {
-                      ws->state = WEBCLIENT_STATE_DATA;
+                      if ((ctx->flags & WEBCLIENT_FLAG_TUNNEL) != 0)
+                        {
+                          if (ctx->http_status / 100 == 2)
+                            {
+                              ninfo("Tunnel established\n");
+                              ws->state = WEBCLIENT_STATE_TUNNEL_ESTABLISHED;
+                            }
+                          else
+                            {
+                              ninfo("HTTP error from tunnelling proxy: %u\n",
+                                    ctx->http_status);
+                              ws->state = WEBCLIENT_STATE_DATA;
+                            }
+                        }
+                      else
+                        {
+                          ws->state = WEBCLIENT_STATE_DATA;
+                        }
                     }
 
                   goto exit;
@@ -722,7 +696,7 @@ static inline int wget_parseheaders(struct webclient_context *ctx,
                       *dest = 0;
                     }
 
-                  strncpy(ws->mimetype, ws->line + strlen(g_httpcontenttype),
+                  strlcpy(ws->mimetype, ws->line + strlen(g_httpcontenttype),
                           sizeof(ws->mimetype));
                   found = true;
                 }
@@ -736,9 +710,16 @@ static inline int wget_parseheaders(struct webclient_context *ctx,
 
                   ninfo("Redirect to location: '%s'\n",
                         ws->line + strlen(g_httplocation));
-                  ret = parseurl(ws->line + strlen(g_httplocation), ws);
+                  ret = parseurl(ws->line + strlen(g_httplocation),
+                                 &ws->target, false);
+                  if (ret != 0)
+                    {
+                      goto exit;
+                    }
+
                   ninfo("New hostname='%s' filename='%s'\n",
-                        ws->hostname, ws->filename);
+                        ws->target.hostname, ws->target.filename);
+                  ws->internal_flags |= WGET_FLAG_GOT_LOCATION;
                   found = true;
                 }
               else if (strncasecmp(ws->line, g_httpcontsize,
@@ -821,6 +802,8 @@ static inline int wget_parsechunkheader(struct webclient_context *ctx,
   int ndx;
   int ret = OK;
 
+  UNUSED(ctx);
+
   offset = ws->offset;
   ndx    = ws->ndx;
 
@@ -838,7 +821,9 @@ static inline int wget_parsechunkheader(struct webclient_context *ctx,
            * our buffer is already full, so we start parsing it.
            */
 
-          if (ndx > 0) /* Should always be true */
+          /* Should always be true */
+
+          if (ndx > 0)
             {
               FAR char *semicolon;
 
@@ -931,6 +916,8 @@ static inline int wget_parsechunkenddata(struct webclient_context *ctx,
   int ndx;
   int ret = OK;
 
+  UNUSED(ctx);
+
   offset = ws->offset;
   ndx    = ws->ndx;
 
@@ -988,6 +975,8 @@ static inline int wget_parsechunktrailer(struct webclient_context *ctx,
   int offset;
   int ndx;
   int ret = OK;
+
+  UNUSED(ctx);
 
   offset = ws->offset;
   ndx    = ws->ndx;
@@ -1084,6 +1073,104 @@ static int wget_gethostip(FAR char *hostname, FAR struct in_addr *dest)
 }
 
 /****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: webclient_conn_send
+ ****************************************************************************/
+
+ssize_t webclient_conn_send(FAR struct webclient_conn_s *conn,
+                            FAR const void *buffer, size_t len)
+{
+  if (conn->tls)
+    {
+      return conn->tls_ops->send(conn->tls_ctx, conn->tls_conn, buffer, len);
+    }
+
+  while (true)
+    {
+      ssize_t ret = send(conn->sockfd, buffer, len, 0);
+      if (ret == -1)
+        {
+          if (errno == EINTR)
+            {
+              continue;
+            }
+
+          if (errno == EAGAIN)
+            {
+              conn->flags |= CONN_WANT_WRITE;
+            }
+
+          return -errno;
+        }
+
+      return ret;
+    }
+}
+
+/****************************************************************************
+ * Name: webclient_conn_recv
+ ****************************************************************************/
+
+ssize_t webclient_conn_recv(FAR struct webclient_conn_s *conn,
+                            FAR void *buffer, size_t len)
+{
+  if (conn->tls)
+    {
+      return conn->tls_ops->recv(conn->tls_ctx, conn->tls_conn, buffer, len);
+    }
+
+  while (true)
+    {
+      ssize_t ret = recv(conn->sockfd, buffer, len, 0);
+      if (ret == -1)
+        {
+          if (errno == EINTR)
+            {
+              continue;
+            }
+
+          if (errno == EAGAIN)
+            {
+              conn->flags |= CONN_WANT_READ;
+            }
+
+          return -errno;
+        }
+
+      return ret;
+    }
+}
+
+/****************************************************************************
+ * Name: webclient_conn_close
+ ****************************************************************************/
+
+void webclient_conn_close(FAR struct webclient_conn_s *conn)
+{
+  if (conn->tls)
+    {
+      conn->tls_ops->close(conn->tls_ctx, conn->tls_conn);
+    }
+  else
+    {
+      close(conn->sockfd);
+    }
+}
+
+/****************************************************************************
+ * Name: webclient_conn_free
+ ****************************************************************************/
+
+void webclient_conn_free(FAR struct webclient_conn_s *conn)
+{
+  DEBUGASSERT(conn != NULL);
+  free(conn);
+}
+
+/****************************************************************************
  * Name: webclient_perform
  *
  * Returned Value:
@@ -1098,7 +1185,7 @@ int webclient_perform(FAR struct webclient_context *ctx)
   struct timeval tv;
   char *dest;
   char *ep;
-  struct conn_s *conn;
+  struct webclient_conn_s *conn;
   FAR const struct webclient_tls_ops *tls_ops = ctx->tls_ops;
   FAR const char *method = ctx->method;
   FAR void *tls_ctx = ctx->tls_ctx;
@@ -1112,6 +1199,15 @@ int webclient_perform(FAR struct webclient_context *ctx)
                (ctx->flags & WEBCLIENT_FLAG_NON_BLOCKING) != 0));
 #endif
 
+#if defined(CONFIG_WEBCLIENT_NET_LOCAL)
+  if (ctx->unix_socket_path != NULL && ctx->proxy != NULL)
+    {
+      nerr("ERROR: proxy with AF_LOCAL is not implemented");
+      _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_DONE);
+      return -ENOTSUP;
+    }
+#endif
+
   /* Initialize the state structure */
 
   if (ctx->ws == NULL)
@@ -1123,6 +1219,14 @@ int webclient_perform(FAR struct webclient_context *ctx)
           return -errno;
         }
 
+      ws->conn = calloc(1, sizeof(struct webclient_conn_s));
+      if (!ws->conn)
+        {
+          free_ws(ws);
+          _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_DONE);
+          return -errno;
+        }
+
       ws->buffer = ctx->buffer;
       ws->buflen = ctx->buflen;
 
@@ -1130,13 +1234,43 @@ int webclient_perform(FAR struct webclient_context *ctx)
        * from the URL.
        */
 
-      ret = parseurl(ctx->url, ws);
-      if (ret != 0)
+      if ((ctx->flags & WEBCLIENT_FLAG_TUNNEL) == 0)
         {
-          nwarn("WARNING: Malformed URL: %s\n", ctx->url);
-          free(ws);
-          _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_DONE);
-          return ret;
+          ret = parseurl(ctx->url, &ws->target, false);
+          if (ret != 0)
+            {
+              nwarn("WARNING: Malformed URL: %s\n", ctx->url);
+              free_ws(ws);
+              _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_DONE);
+              return ret;
+            }
+        }
+
+      if (ctx->proxy != NULL)
+        {
+          /* Note: reject a proxy string w/o port number specified.
+           * It's better to be explicit because the default number varies
+           * among HTTP client implementations.
+           * (80, 1080, 3128, 8080, ...)
+           */
+
+          ret = parseurl(ctx->proxy, &ws->proxy, true);
+          if (ret != 0)
+            {
+              nerr("ERROR: Malformed proxy setting: %s\n", ctx->proxy);
+              free_ws(ws);
+              _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_DONE);
+              return ret;
+            }
+
+          if (strcmp(ws->proxy.scheme, "http") ||
+              strcmp(ws->proxy.filename, "/"))
+            {
+              nerr("ERROR: Unsupported proxy setting: %s\n", ctx->proxy);
+              free_ws(ws);
+              _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_DONE);
+              return -ENOTSUP;
+            }
         }
 
       ws->state = WEBCLIENT_STATE_SOCKET;
@@ -1145,27 +1279,34 @@ int webclient_perform(FAR struct webclient_context *ctx)
 
   ws = ctx->ws;
 
-  ninfo("hostname='%s' filename='%s'\n", ws->hostname, ws->filename);
+  ninfo("hostname='%s' filename='%s'\n", ws->target.hostname,
+        ws->target.filename);
 
   /* The following sequence may repeat indefinitely if we are redirected */
 
-  conn = &ws->conn;
+  conn = ws->conn;
   do
     {
       if (ws->state == WEBCLIENT_STATE_SOCKET)
         {
-          if (!strcmp(ws->scheme, "https") && tls_ops != NULL)
+          if ((ctx->flags & WEBCLIENT_FLAG_TUNNEL) != 0)
+            {
+              conn->tls = false;
+            }
+          else if (!strcmp(ws->target.scheme, "https") && tls_ops != NULL)
             {
               conn->tls = true;
+              conn->tls_ops = tls_ops;
+              conn->tls_ctx = ctx->tls_ctx;
             }
-          else if (!strcmp(ws->scheme, "http"))
+          else if (!strcmp(ws->target.scheme, "http"))
             {
               conn->tls = false;
             }
           else
             {
-              nerr("ERROR: unsupported scheme: %s\n", ws->scheme);
-              free(ws);
+              nerr("ERROR: unsupported scheme: %s\n", ws->target.scheme);
+              free_ws(ws);
               _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_DONE);
               return -ENOTSUP;
             }
@@ -1187,11 +1328,61 @@ int webclient_perform(FAR struct webclient_context *ctx)
               if (ctx->unix_socket_path != NULL)
                 {
                   nerr("ERROR: TLS on AF_LOCAL socket is not implemented\n");
-                  free(ws);
+                  free_ws(ws);
                   _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_DONE);
                   return -ENOTSUP;
                 }
 #endif
+
+              if (ctx->proxy != NULL)
+                {
+                  FAR struct webclient_context *tunnel;
+
+                  DEBUGASSERT(ws->tunnel == NULL);
+
+                  if (tls_ops->init_connection == NULL)
+                    {
+                      nerr("ERROR: TLS over proxy is not implemented\n");
+                      ret = -ENOTSUP;
+                      goto errout_with_errno;
+                    }
+
+                  /* Create a temporary context to establish a tunnel. */
+
+                  ws->tunnel = tunnel = calloc(1, sizeof(*ws->tunnel));
+                  if (tunnel == NULL)
+                    {
+                      ret = -ENOMEM;
+                      goto errout_with_errno;
+                    }
+
+                  webclient_set_defaults(tunnel);
+                  tunnel->method = "CONNECT";
+                  tunnel->flags |= WEBCLIENT_FLAG_TUNNEL;
+                  tunnel->tunnel_target_host = ws->target.hostname;
+                  tunnel->tunnel_target_port = ws->target.port;
+                  tunnel->proxy = ctx->proxy;
+                  tunnel->proxy_headers = ctx->proxy_headers;
+                  tunnel->proxy_nheaders = ctx->proxy_nheaders;
+
+                  /* Inherit some configurations.
+                   *
+                   * Revisit: should there be independent configurations?
+                   */
+
+                  tunnel->protocol_version = ctx->protocol_version;
+                  if ((ctx->flags & WEBCLIENT_FLAG_NON_BLOCKING) != 0)
+                    {
+                      tunnel->flags |= WEBCLIENT_FLAG_NON_BLOCKING;
+                    }
+
+                  /* Abuse the buffer of the original request.
+                   * It's safe with the current usage.
+                   */
+
+                  tunnel->buffer = ctx->buffer;
+                  tunnel->buflen = ctx->buflen;
+                }
             }
           else
             {
@@ -1238,10 +1429,25 @@ int webclient_perform(FAR struct webclient_context *ctx)
                   tv.tv_sec  = ctx->timeout_sec;
                   tv.tv_usec = 0;
 
-                  setsockopt(conn->sockfd, SOL_SOCKET, SO_RCVTIMEO,
-                             (FAR const void *)&tv, sizeof(struct timeval));
-                  setsockopt(conn->sockfd, SOL_SOCKET, SO_SNDTIMEO,
-                             (FAR const void *)&tv, sizeof(struct timeval));
+                  /* Check return value one by one */
+
+                  ret = setsockopt(conn->sockfd, SOL_SOCKET, SO_RCVTIMEO,
+                                   &tv, sizeof(struct timeval));
+                  if (ret != 0)
+                    {
+                      ret = -errno;
+                      nerr("ERROR: setsockopt failed: %d\n", ret);
+                      goto errout_with_errno;
+                    }
+
+                  ret = setsockopt(conn->sockfd, SOL_SOCKET, SO_SNDTIMEO,
+                                   &tv, sizeof(struct timeval));
+                  if (ret != 0)
+                    {
+                      ret = -errno;
+                      nerr("ERROR: setsockopt failed: %d\n", ret);
+                      goto errout_with_errno;
+                    }
                 }
             }
 
@@ -1250,7 +1456,83 @@ int webclient_perform(FAR struct webclient_context *ctx)
 
       if (ws->state == WEBCLIENT_STATE_CONNECT)
         {
-          if (conn->tls)
+          if (ws->tunnel != NULL)
+            {
+              ret = webclient_perform(ws->tunnel);
+              if (ret == 0)
+                {
+                  unsigned int http_status = ws->tunnel->http_status;
+
+                  if (http_status / 100 != 2)
+                    {
+                      nerr("HTTP-level error %u on tunnel attempt\n",
+                           http_status);
+
+                      /* 407 Proxy Authentication Required */
+
+                      if (http_status == 407)
+                        {
+                          ret = -EPERM;
+                        }
+                      else
+                        {
+                          ret = -EIO;
+                        }
+                    }
+                }
+
+              if (ret == 0)
+                {
+                  FAR struct webclient_conn_s *tunnel_conn;
+
+                  webclient_get_tunnel(ws->tunnel, &tunnel_conn);
+                  DEBUGASSERT(tunnel_conn != NULL);
+                  DEBUGASSERT(!tunnel_conn->tls);
+                  free(ws->tunnel);
+                  ws->tunnel = NULL;
+
+                  if (conn->tls)
+                    {
+                      /* Revisit: tunnel_conn here should have
+                       * timeout configured already.
+                       * Configuring it again here is redundant.
+                       */
+
+                      ret = tls_ops->init_connection(tls_ctx,
+                                                     tunnel_conn,
+                                                     ws->target.hostname,
+                                                     ctx->timeout_sec,
+                                                     &conn->tls_conn);
+                      if (ret == 0)
+                        {
+                          /* Note: tunnel_conn has been consumed by
+                           * tls_ops->init_connection
+                           */
+
+                          ws->need_conn_close = true;
+                        }
+                      else
+                        {
+                          /* Note: restarting tls_ops->init_connection
+                           * is not implemented
+                           */
+
+                          DEBUGASSERT(ret != -EAGAIN &&
+                                      ret != -EINPROGRESS &&
+                                      ret != -EALREADY);
+                          webclient_conn_close(tunnel_conn);
+                          webclient_conn_free(tunnel_conn);
+                        }
+                    }
+                  else
+                    {
+                      conn->sockfd = tunnel_conn->sockfd;
+                      ws->need_conn_close = true;
+                      webclient_conn_free(tunnel_conn);
+                    }
+                }
+            }
+          else if (conn->tls)
             {
               char port_str[sizeof("65535")];
 
@@ -1258,14 +1540,14 @@ int webclient_perform(FAR struct webclient_context *ctx)
               if (ctx->unix_socket_path != NULL)
                 {
                   nerr("ERROR: TLS on AF_LOCAL socket is not implemented\n");
-                  free(ws);
+                  free_ws(ws);
                   _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_DONE);
                   return -ENOTSUP;
                 }
 #endif
 
-              snprintf(port_str, sizeof(port_str), "%u", ws->port);
-              ret = tls_ops->connect(tls_ctx, ws->hostname, port_str,
+              snprintf(port_str, sizeof(port_str), "%u", ws->target.port);
+              ret = tls_ops->connect(tls_ctx, ws->target.hostname, port_str,
                                      ctx->timeout_sec,
                                      &conn->tls_conn);
               if (ret == 0)
@@ -1287,7 +1569,7 @@ int webclient_perform(FAR struct webclient_context *ctx)
                 {
                   memset(&server_un, 0, sizeof(server_un));
                   server_un.sun_family = AF_LOCAL;
-                  strncpy(server_un.sun_path, ctx->unix_socket_path,
+                  strlcpy(server_un.sun_path, ctx->unix_socket_path,
                           sizeof(server_un.sun_path));
 #if !defined(__NuttX__) && !defined(__linux__)
                   server_un.sun_len = SUN_LEN(&server_un);
@@ -1300,17 +1582,28 @@ int webclient_perform(FAR struct webclient_context *ctx)
                 {
                   /* Get the server address from the host name */
 
+                  FAR struct wget_target_s *target;
+
+                  if (ctx->proxy != NULL)
+                    {
+                      target = &ws->proxy;
+                    }
+                  else
+                    {
+                      target = &ws->target;
+                    }
+
                   server_in.sin_family = AF_INET;
-                  server_in.sin_port   = htons(ws->port);
-                  ret = wget_gethostip(ws->hostname, &server_in.sin_addr);
+                  server_in.sin_port   = htons(target->port);
+                  ret = wget_gethostip(target->hostname,
+                                       &server_in.sin_addr);
                   if (ret < 0)
                     {
                       /* Could not resolve host (or malformed IP address) */
 
                       nwarn("WARNING: Failed to resolve hostname\n");
-                      free(ws);
-                      _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_DONE);
-                      return -EHOSTUNREACH;
+                      ret = -EHOSTUNREACH;
+                      goto errout_with_errno;
                     }
 
                   server_address = (const struct sockaddr *)&server_in;
@@ -1362,13 +1655,51 @@ int webclient_perform(FAR struct webclient_context *ctx)
           dest = append(dest, ep, method);
           dest = append(dest, ep, " ");
 
-#ifndef WGET_USE_URLENCODE
-          dest = append(dest, ep, ws->filename);
-#else
-          /* TODO: should we use wget_urlencode_strcpy? */
+          if ((ctx->flags & WEBCLIENT_FLAG_TUNNEL) != 0)
+            {
+              /* Use authority-form for a tunnel
+               *
+               * https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.6
+               * https://datatracker.ietf.org/doc/html/rfc7230#section-5.3.3
+               */
 
-          dest = append(dest, ep, ws->filename);
+              char port_str[sizeof("65535")];
+
+              dest = append(dest, ep, ctx->tunnel_target_host);
+              dest = append(dest, ep, ":");
+              snprintf(port_str, sizeof(port_str), "%u",
+                       ctx->tunnel_target_port);
+              dest = append(dest, ep, port_str);
+            }
+          else if (ctx->proxy != NULL)
+            {
+              /* Use absolute-form for a proxy
+               *
+               * https://datatracker.ietf.org/doc/html/rfc7230#section-5.3.2
+               */
+
+              char port_str[sizeof("65535")];
+
+              dest = append(dest, ep, ws->target.scheme);
+              dest = append(dest, ep, "://");
+              dest = append(dest, ep, ws->target.hostname);
+              dest = append(dest, ep, ":");
+              snprintf(port_str, sizeof(port_str), "%u", ws->target.port);
+              dest = append(dest, ep, port_str);
+              dest = append(dest, ep, ws->target.filename);
+            }
+          else
+            {
+              /* Otherwise, use origin-form */
+
+#ifndef WGET_USE_URLENCODE
+              dest = append(dest, ep, ws->target.filename);
+#else
+              /* TODO: should we use wget_urlencode_strcpy? */
+
+              dest = append(dest, ep, ws->target.filename);
 #endif
+            }
 
           dest = append(dest, ep, " ");
           if (ctx->protocol_version == WEBCLIENT_PROTOCOL_VERSION_HTTP_1_0)
@@ -1387,14 +1718,55 @@ int webclient_perform(FAR struct webclient_context *ctx)
             }
 
           dest = append(dest, ep, g_httpcrnl);
+
+          /* Note about proxy and Host header:
+           *
+           * https://datatracker.ietf.org/doc/html/rfc7230#section-5.4
+           * > A client MUST send a Host header field in an HTTP/1.1
+           * > request even if the request-target is in the absolute-form,
+           * > since this allows the Host information to be forwarded
+           * > through ancient HTTP/1.0 proxies that might not have
+           * > implemented Host.
+           *
+           * > When a proxy receives a request with an absolute-form of
+           * > request-target, the proxy MUST ignore the received Host
+           * > header field (if any) and instead replace it with the host
+           * > information of the request-target.
+           */
+
           dest = append(dest, ep, g_httphost);
-          dest = append(dest, ep, ws->hostname);
+          dest = append(dest, ep, ws->target.hostname);
           dest = append(dest, ep, g_httpcrnl);
 
-          for (i = 0; i < ctx->nheaders; i++)
+          /* Append user-specified headers.
+           *
+           * - For non-proxied request,
+           *   only send "headers".
+           *
+           * - For proxied request, (traditional http proxy)
+           *   send both of "headers" and "proxy_headers".
+           *
+           * - For tunneling request, (WEBCLIENT_FLAG_TUNNEL)
+           *   only send "proxy_headers".
+           */
+
+          if ((ctx->flags & WEBCLIENT_FLAG_TUNNEL) == 0)
             {
-              dest = append(dest, ep, ctx->headers[i]);
-              dest = append(dest, ep, g_httpcrnl);
+              for (i = 0; i < ctx->nheaders; i++)
+                {
+                  dest = append(dest, ep, ctx->headers[i]);
+                  dest = append(dest, ep, g_httpcrnl);
+                }
+            }
+
+          if ((ctx->flags & WEBCLIENT_FLAG_TUNNEL) != 0 ||
+              ctx->proxy != NULL)
+            {
+              for (i = 0; i < ctx->proxy_nheaders; i++)
+                {
+                  dest = append(dest, ep, ctx->proxy_headers[i]);
+                  dest = append(dest, ep, g_httpcrnl);
+                }
             }
 
           if (ctx->bodylen)
@@ -1402,7 +1774,7 @@ int webclient_perform(FAR struct webclient_context *ctx)
               char post_size[sizeof("18446744073709551615")];
 
               dest = append(dest, ep, g_httpcontsize);
-              sprintf(post_size, "%zu", ctx->bodylen);
+              snprintf(post_size, sizeof(post_size), "%zu", ctx->bodylen);
               dest = append(dest, ep, post_size);
               dest = append(dest, ep, g_httpcrnl);
             }
@@ -1434,9 +1806,9 @@ int webclient_perform(FAR struct webclient_context *ctx)
         {
           ssize_t ssz;
 
-          ssz = conn_send(ctx, conn,
-                          ws->buffer + ws->state_offset,
-                          ws->state_len);
+          ssz = webclient_conn_send(conn,
+                                    ws->buffer + ws->state_offset,
+                                    ws->state_len);
           if (ssz < 0)
             {
               ret = ssz;
@@ -1509,9 +1881,10 @@ int webclient_perform(FAR struct webclient_context *ctx)
               size_t bytes_to_send = ws->data_len - ws->state_offset;
 
               DEBUGASSERT(bytes_to_send <= ws->state_len);
-              ssize_t ssz = conn_send(ctx, conn,
-                                      ws->data_buffer + ws->state_offset,
-                                      bytes_to_send);
+              ssize_t ssz = webclient_conn_send(conn,
+                                                (char *)ws->data_buffer +
+                                                ws->state_offset,
+                                                bytes_to_send);
               if (ssz < 0)
                 {
                   ret = ssz;
@@ -1528,8 +1901,8 @@ int webclient_perform(FAR struct webclient_context *ctx)
                     ws->state_len);
               ws->state_len -= ssz;
               ws->state_offset += ssz;
-              DEBUGASSERT(ws->state_offset <= ws->data_len);
-              if (ws->state_offset == ws->data_len)
+              DEBUGASSERT((size_t)ws->state_offset <= ws->data_len);
+              if ((size_t)ws->state_offset == ws->data_len)
                 {
                   ws->data_buffer = NULL;
                 }
@@ -1551,10 +1924,22 @@ int webclient_perform(FAR struct webclient_context *ctx)
             {
               if (ws->datend - ws->offset == 0)
                 {
+                  size_t want = ws->buflen;
                   ssize_t ssz;
 
                   ninfo("Reading new data\n");
-                  ssz = conn_recv(ctx, conn, ws->buffer, ws->buflen);
+                  if ((ctx->flags & WEBCLIENT_FLAG_TUNNEL) != 0)
+                    {
+                      /* When tunnelling, we want to avoid troubles
+                       * with reading the starting payload of the tunnelled
+                       * protocol here, in case it's a server-speaks-first
+                       * protocol.
+                       */
+
+                      want = 1;
+                    }
+
+                  ssz = webclient_conn_recv(conn, ws->buffer, want);
                   if (ssz < 0)
                     {
                       ret = ssz;
@@ -1668,6 +2053,11 @@ int webclient_perform(FAR struct webclient_context *ctx)
                       FAR char *orig_buffer = ws->buffer;
                       int orig_buflen = ws->buflen;
 
+                      if ((ws->internal_flags & WGET_FLAG_GOT_LOCATION) != 0)
+                        {
+                          nwarn("WARNING: Unexpected Location header\n");
+                        }
+
                       if (ws->state == WEBCLIENT_STATE_CHUNKED_DATA)
                         {
                           uintmax_t chunk_left =
@@ -1705,7 +2095,7 @@ int webclient_perform(FAR struct webclient_context *ctx)
                               goto errout_with_errno;
                             }
                         }
-                      else
+                      else if (ctx->callback)
                         {
                           ctx->callback(&ws->buffer, ws->offset,
                                         ws->offset + received,
@@ -1741,6 +2131,13 @@ int webclient_perform(FAR struct webclient_context *ctx)
                     }
                   else
                     {
+                      if ((ws->internal_flags & WGET_FLAG_GOT_LOCATION) == 0)
+                        {
+                          nerr("ERROR: Redirect w/o Location header\n");
+                          ret = -EPROTO;
+                          goto errout_with_errno;
+                        }
+
                       ws->nredirect++;
                       if (ws->nredirect > CONFIG_WEBCLIENT_MAX_REDIRECT)
                         {
@@ -1755,12 +2152,17 @@ int webclient_perform(FAR struct webclient_context *ctx)
                       break;
                     }
                 }
+
+              if (ws->state == WEBCLIENT_STATE_TUNNEL_ESTABLISHED)
+                {
+                  break;
+                }
             }
         }
 
       if (ws->state == WEBCLIENT_STATE_CLOSE)
         {
-          conn_close(ctx, conn);
+          webclient_conn_close(conn);
           ws->need_conn_close = false;
           if (ws->redirected)
             {
@@ -1772,10 +2174,19 @@ int webclient_perform(FAR struct webclient_context *ctx)
             }
         }
     }
-  while (ws->state != WEBCLIENT_STATE_DONE);
+  while (ws->state != WEBCLIENT_STATE_DONE &&
+         ws->state != WEBCLIENT_STATE_TUNNEL_ESTABLISHED);
 
-  free(ws);
-  _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_DONE);
+  if (ws->state == WEBCLIENT_STATE_DONE)
+    {
+      free_ws(ws);
+      _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_DONE);
+    }
+  else
+    {
+      _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_TUNNEL_ESTABLISHED);
+    }
+
   return OK;
 
 errout_with_errno:
@@ -1793,17 +2204,13 @@ errout_with_errno:
 
   if (ws->need_conn_close)
     {
-      conn_close(ctx, conn);
+      webclient_conn_close(conn);
     }
 
-  free(ws);
+  free_ws(ws);
   _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_DONE);
   return ret;
 }
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 /****************************************************************************
  * Name: webclient_abort
@@ -1832,12 +2239,17 @@ void webclient_abort(FAR struct webclient_context *ctx)
 
   if (ws->need_conn_close)
     {
-      struct conn_s *conn = &ws->conn;
+      struct webclient_conn_s *conn = ws->conn;
 
-      conn_close(ctx, conn);
+      webclient_conn_close(conn);
     }
 
-  free(ws);
+  if (ws->tunnel != NULL)
+    {
+      webclient_abort(ws->tunnel);
+    }
+
+  free_ws(ws);
   _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_ABORTED);
 }
 
@@ -2076,7 +2488,7 @@ int webclient_get_poll_info(FAR struct webclient_context *ctx,
                              FAR struct webclient_poll_info *info)
 {
   struct wget_s *ws;
-  struct conn_s *conn;
+  struct webclient_conn_s *conn;
 
   _CHECK_STATE(ctx, WEBCLIENT_CONTEXT_STATE_IN_PROGRESS);
   DEBUGASSERT((ctx->flags & WEBCLIENT_FLAG_NON_BLOCKING) != 0);
@@ -2087,7 +2499,12 @@ int webclient_get_poll_info(FAR struct webclient_context *ctx,
       return -EINVAL;
     }
 
-  conn = &ws->conn;
+  if (ws->tunnel != NULL)
+    {
+      return webclient_get_poll_info(ws->tunnel, info);
+    }
+
+  conn = ws->conn;
   if (conn->tls)
     {
       return ctx->tls_ops->get_poll_info(ctx->tls_ctx, conn->tls_conn, info);
@@ -2097,4 +2514,49 @@ int webclient_get_poll_info(FAR struct webclient_context *ctx,
   info->flags = conn->flags & (CONN_WANT_READ | CONN_WANT_WRITE);
   conn->flags &= ~(CONN_WANT_READ | CONN_WANT_WRITE);
   return 0;
+}
+
+/****************************************************************************
+ * Name: webclient_get_tunnel
+ *
+ * Description:
+ *   This function is used to get the webclient_conn_s, which describes
+ *   the tunneled connection.
+ *
+ *   This function should be used exactly once after a successful
+ *   call of webclient_perform with WEBCLIENT_FLAG_TUNNEL, with
+ *   http_status 2xx.
+ *
+ *   This function also disposes the given webclient_context.
+ *   The context will be invalid after a call of this function.
+ *
+ *   It's the caller's responsibility to close the returned
+ *   webclient_conn_s, either using webclient_conn_close() or
+ *   using the internal knowledge about the structure. (E.g.
+ *   It's sometimes convenient/efficient for the caller to
+ *   only keep conn->sockfd descriptor and free the rest of the
+ *   structure using webclient_conn_free(). In that case, it will
+ *   need to close() the descriptor after finishing on it.)
+ *
+ *   It's the caller's responsibility to free the returned
+ *   webclient_conn_s using webclient_conn_free().
+ *
+ ****************************************************************************/
+
+void webclient_get_tunnel(FAR struct webclient_context *ctx,
+                          FAR struct webclient_conn_s **connp)
+{
+  struct wget_s *ws;
+  struct webclient_conn_s *conn;
+
+  _CHECK_STATE(ctx, WEBCLIENT_CONTEXT_STATE_TUNNEL_ESTABLISHED);
+  DEBUGASSERT(ctx->http_status / 100 == 2);
+  ws = ctx->ws;
+  DEBUGASSERT(ws != NULL);
+  conn = ws->conn;
+  DEBUGASSERT(conn != NULL);
+  *connp = conn;
+  ws->conn = NULL;
+  free_ws(ws);
+  _SET_STATE(ctx, WEBCLIENT_CONTEXT_STATE_DONE);
 }

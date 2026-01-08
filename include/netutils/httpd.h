@@ -1,15 +1,11 @@
 /****************************************************************************
  * apps/include/netutils/httpd.h
  *
- *   Copyright (C) 2007, 2009, 2011-2012, 2014, 2018 Gregory Nutt. All
- *     rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * Based on uIP which also has a BSD style license:
- *
- *   Author: Adam Dunkels <adam@sics.se>
- *   Copyright (c) 2001-2005, Adam Dunkels.
- *   All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2007, 2009-2011, 2014, 2018 Gregory Nutt
+ * SPDX-FileCopyrightText: 2001-2005, Adam Dunkels.
+ * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
+ * SPDX-FileContributor: Adam Dunkels <adam@sics.se>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -72,6 +68,10 @@
  * MSS value.  Here we arbitrarily select the minimum MSS for that case.
  */
 
+#ifndef MIN_TCP_MSS
+#  error "You need to enable TCP/IP (i.e. CONFIG_NET_TCP) to use HTTPD"
+#endif
+
 #define HTTPD_IOBUFFER_SIZE (3*MIN_TCP_MSS)
 
 /* This is the maximum size of a file path */
@@ -96,7 +96,7 @@
 
 struct httpd_fs_file
 {
-  char *data;
+  FAR char *data;
   int len;
 #if defined(CONFIG_NETUTILS_HTTPD_MMAP) || \
     defined(CONFIG_NETUTILS_HTTPD_SENDFILE)
@@ -109,17 +109,17 @@ struct httpd_fs_file
 
 struct httpd_state
 {
-  char     ht_buffer[HTTPD_IOBUFFER_SIZE];  /* recv() buffer */
-  char     ht_filename[HTTPD_MAX_FILENAME]; /* filename from GET command */
+  char ht_buffer[HTTPD_IOBUFFER_SIZE];  /* recv() buffer */
+  char ht_filename[HTTPD_MAX_FILENAME]; /* filename from GET command */
 #ifndef CONFIG_NETUTILS_HTTPD_KEEPALIVE_DISABLE
-  bool     ht_keepalive;                    /* Connection: keep-alive */
+  bool ht_keepalive;                    /* Connection: keep-alive */
 #endif
 #if defined(CONFIG_NETUTILS_HTTPD_ENABLE_CHUNKED_ENCODING)
-  bool     ht_chunked;                      /* Server uses chunked encoding for tx */
+  bool ht_chunked;                      /* Server uses chunked encoding for tx */
 #endif
-  struct httpd_fs_file ht_file;             /* Fake file data to send */
-  int      ht_sockfd;                       /* The socket descriptor from accept() */
-  char    *ht_scriptptr;
+  struct httpd_fs_file ht_file;         /* Fake file data to send */
+  int ht_sockfd;                        /* The socket descriptor from accept() */
+  FAR char *ht_scriptptr;
   uint16_t ht_scriptlen;
   uint16_t ht_sndlen;
 };
@@ -146,12 +146,12 @@ struct httpd_fsdata_file_noconst
 #endif
 };
 
-typedef void (*httpd_cgifunction)(struct httpd_state *, char *);
+typedef void CODE (*httpd_cgifunction)(FAR struct httpd_state *, FAR char *);
 
 struct httpd_cgi_call
 {
-  struct httpd_cgi_call *next;
-  const char *name;
+  FAR struct httpd_cgi_call *next;
+  FAR const char *name;
   httpd_cgifunction function;
 };
 
@@ -222,7 +222,7 @@ int httpd_listen(void);
  *
  ****************************************************************************/
 
-void httpd_cgi_register(struct httpd_cgi_call *cgi_call);
+void httpd_cgi_register(FAR struct httpd_cgi_call *cgi_call);
 
 /****************************************************************************
  * Name: httpd_send_datachunk
@@ -244,7 +244,7 @@ void httpd_cgi_register(struct httpd_cgi_call *cgi_call);
  *
  ****************************************************************************/
 
-int httpd_send_datachunk(int sockfd, void *data, int len, bool chunked);
+int httpd_send_datachunk(int sockfd, FAR void *data, int len, bool chunked);
 
 /****************************************************************************
  * Name: httpd_send_headers
@@ -263,10 +263,10 @@ int httpd_send_datachunk(int sockfd, void *data, int len, bool chunked);
  *
  ****************************************************************************/
 
-int httpd_send_headers(struct httpd_state *pstate, int status, int len);
+int httpd_send_headers(FAR struct httpd_state *pstate, int status, int len);
 
 #ifdef CONFIG_NETUTILS_HTTPDFSSTATS
-uint16_t httpd_fs_count(char *name);
+uint16_t httpd_fs_count(FAR char *name);
 #endif
 
 #ifdef CONFIG_NETUTILS_HTTPD_DIRLIST

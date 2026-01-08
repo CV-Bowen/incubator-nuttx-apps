@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/wireless/gs2200m/gs2200m_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -36,6 +38,7 @@
 #include <poll.h>
 #include <unistd.h>
 
+#include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>
@@ -53,13 +56,9 @@
 /* #define GS2200M_TRACE */
 
 #ifdef GS2200M_TRACE
-# define gs2200m_printf(v, ...) printf(v, ##__VA_ARGS__)
+#  define gs2200m_printf(v, ...) printf(v, ##__VA_ARGS__)
 #else
-# define gs2200m_printf(v, ...)
-#endif
-
-#ifndef MIN
-#  define MIN(a,b) ((a) < (b) ? (a) : (b))
+#  define gs2200m_printf(v, ...)
 #endif
 
 #define SOCKET_BASE  10000
@@ -93,6 +92,7 @@ struct gs2200m_s
   uint8_t mode;
   uint8_t ch;
   int     gsfd;
+  int     usock_enable;
   struct usock_s sockets[SOCKET_COUNT];
 };
 
@@ -243,11 +243,13 @@ static int _write_to_usock(int fd, void *buf, size_t count)
  ****************************************************************************/
 
 static int _send_ack_common(int fd,
-                            uint64_t xid,
+                            uint16_t events,
+                            uint32_t xid,
                             FAR struct usrsock_message_req_ack_s *resp)
 {
-  resp->head.msgid = USRSOCK_MESSAGE_RESPONSE_ACK;
-  resp->head.flags = 0;
+  resp->head.msgid  = USRSOCK_MESSAGE_RESPONSE_ACK;
+  resp->head.flags  = 0;
+  resp->head.events = events;
   resp->xid = xid;
 
   /* Send ACK response. */
@@ -377,10 +379,10 @@ read_req(int fd, FAR const struct usrsock_request_common_s *com_hdr,
 }
 
 /****************************************************************************
- * Name: usrsock_request
+ * Name: usrsock_handle_request
  ****************************************************************************/
 
-static int usrsock_request(int fd, FAR struct gs2200m_s *priv)
+static int usrsock_handle_request(int fd, FAR struct gs2200m_s *priv)
 {
   FAR struct usrsock_request_common_s *com_hdr;
   union usrsock_request_u req;
@@ -447,9 +449,27 @@ static int usock_send_event(int fd, FAR struct gs2200m_s *priv,
     }
 
   event.usockid = i + SOCKET_BASE;
-  event.events  = events;
+  event.head.events = events;
 
   return _write_to_usock(fd, &event, sizeof(event));
+}
+
+/****************************************************************************
+ * Name: usock_sendevent_toall
+ ****************************************************************************/
+
+static void usock_sendevent_toall(FAR struct gs2200m_s *priv, int fd)
+{
+  int i;
+
+  for (i = 0; i < SOCKET_COUNT; i++)
+    {
+      if (priv->sockets[i].state != CLOSED)
+        {
+          usock_send_event(fd, priv, &priv->sockets[i],
+                           USRSOCK_EVENT_RECVFROM_AVAIL);
+        }
+    }
 }
 
 /****************************************************************************
@@ -461,7 +481,7 @@ static int socket_request(int fd, FAR struct gs2200m_s *priv,
 {
   FAR struct usrsock_request_socket_s *req = hdrbuf;
   struct usrsock_message_req_ack_s resp;
-  FAR struct usock_s *usock;
+  uint16_t events = 0;
   int16_t usockid;
   int ret;
 
@@ -473,6 +493,16 @@ static int socket_request(int fd, FAR struct gs2200m_s *priv,
   if (req->domain != AF_INET)
     {
       usockid = -EAFNOSUPPORT;
+    }
+  else if (!priv->usock_enable && req->domain == AF_INET &&
+           req->type != SOCK_CTRL)
+    {
+      /* If domain is AF_INET while usock_enable is false,
+       * set usockid to -ENOTSUP to fallback kernel
+       * network stack.
+       */
+
+      usockid = -ENOTSUP;
     }
   else
     {
@@ -486,22 +516,16 @@ static int socket_request(int fd, FAR struct gs2200m_s *priv,
 
   memset(&resp, 0, sizeof(resp));
   resp.result = usockid;
-  ret = _send_ack_common(fd, req->head.xid, &resp);
+  if (req->type == SOCK_DGRAM)
+    {
+      events = USRSOCK_EVENT_SENDTO_READY;
+    }
+
+  ret = _send_ack_common(fd, events, req->head.xid, &resp);
 
   if (0 > ret)
     {
       return ret;
-    }
-
-  if (req->type == SOCK_DGRAM)
-    {
-      /* NOTE: If the socket type is DGRAM, it's ready to send
-       * a packet after creating user socket.
-       */
-
-      usock = gs2200m_socket_get(priv, usockid);
-      usock_send_event(fd, priv, usock,
-                       USRSOCK_EVENT_SENDTO_READY);
     }
 
   gs2200m_printf("%s: end\n", __func__);
@@ -546,7 +570,7 @@ errout:
 
   memset(&resp, 0, sizeof(resp));
   resp.result = ret;
-  ret = _send_ack_common(fd, req->head.xid, &resp);
+  ret = _send_ack_common(fd, 0, req->head.xid, &resp);
 
   if (0 > ret)
     {
@@ -685,7 +709,7 @@ prepare:
 
   memset(&resp, 0, sizeof(resp));
   resp.result = ret;
-  ret = _send_ack_common(fd, req->head.xid, &resp);
+  ret = _send_ack_common(fd, 0, req->head.xid, &resp);
 
   if (0 > ret)
     {
@@ -842,7 +866,6 @@ static int sendto_request(int fd, FAR struct gs2200m_s *priv,
     }
 
 prepare:
-
   if (sendbuf)
     {
       free(sendbuf);
@@ -852,7 +875,7 @@ prepare:
 
   memset(&resp, 0, sizeof(resp));
   resp.result = ret;
-  ret = _send_ack_common(fd, req->head.xid, &resp);
+  ret = _send_ack_common(fd, 0, req->head.xid, &resp);
 
   if (0 > ret)
     {
@@ -883,6 +906,7 @@ static int recvfrom_request(int fd, FAR struct gs2200m_s *priv,
 {
   FAR struct usrsock_request_recvfrom_s *req = hdrbuf;
   struct usrsock_message_datareq_ack_s resp;
+  struct usrsock_message_req_ack_s resp1;
   struct gs2200m_recv_msg rmsg;
   FAR struct usock_s *usock;
   int ret = 0;
@@ -951,8 +975,9 @@ prepare:
   memset(&resp, 0, sizeof(resp));
   resp.reqack.result = ret;
   resp.reqack.xid = req->head.xid;
-  resp.reqack.head.msgid = USRSOCK_MESSAGE_RESPONSE_DATA_ACK;
-  resp.reqack.head.flags = 0;
+  resp.reqack.head.msgid  = USRSOCK_MESSAGE_RESPONSE_DATA_ACK;
+  resp.reqack.head.flags  = 0;
+  resp.reqack.head.events = 0;
 
   if (0 <= ret)
     {
@@ -965,6 +990,14 @@ prepare:
           usock_send_event(fd, priv, usock,
                            USRSOCK_EVENT_REMOTE_CLOSED
                            );
+
+          /* Send ack only */
+
+          memset(&resp1, 0, sizeof(resp1));
+          resp1.result = ret;
+          ret = _send_ack_common(fd, 0, req->head.xid, &resp1);
+
+          goto err_out;
         }
     }
 
@@ -1002,7 +1035,6 @@ prepare:
     }
 
 err_out:
-
   gs2200m_printf("%s: *** end ret=%d\n", __func__, ret);
 
   if (rmsg.buf)
@@ -1087,7 +1119,7 @@ prepare:
 
   memset(&resp, 0, sizeof(resp));
   resp.result = ret;
-  ret = _send_ack_common(fd, req->head.xid, &resp);
+  ret = _send_ack_common(fd, 0, req->head.xid, &resp);
 
   if (0 > ret)
     {
@@ -1128,7 +1160,7 @@ static int listen_request(int fd, FAR struct gs2200m_s *priv,
 
   memset(&resp, 0, sizeof(resp));
   resp.result = ret;
-  ret = _send_ack_common(fd, req->head.xid, &resp);
+  ret = _send_ack_common(fd, 0, req->head.xid, &resp);
 
   if (0 > ret)
     {
@@ -1199,8 +1231,9 @@ prepare:
 
   memset(&resp, 0, sizeof(resp));
   resp.reqack.xid = req->head.xid;
-  resp.reqack.head.msgid = USRSOCK_MESSAGE_RESPONSE_DATA_ACK;
-  resp.reqack.head.flags = 0;
+  resp.reqack.head.msgid  = USRSOCK_MESSAGE_RESPONSE_DATA_ACK;
+  resp.reqack.head.flags  = 0;
+  resp.reqack.head.events = 0;
 
   if (0 == ret)
     {
@@ -1330,7 +1363,7 @@ prepare:
   memset(&resp, 0, sizeof(resp));
   resp.result = ret;
 
-  ret = _send_ack_common(fd, req->head.xid, &resp);
+  ret = _send_ack_common(fd, 0, req->head.xid, &resp);
 
   gs2200m_printf("%s: end (ret=%d)\n", __func__, ret);
   return ret;
@@ -1387,8 +1420,9 @@ prepare:
 
   memset(&resp, 0, sizeof(resp));
   resp.reqack.xid = req->head.xid;
-  resp.reqack.head.msgid = USRSOCK_MESSAGE_RESPONSE_DATA_ACK;
-  resp.reqack.head.flags = 0;
+  resp.reqack.head.msgid  = USRSOCK_MESSAGE_RESPONSE_DATA_ACK;
+  resp.reqack.head.flags  = 0;
+  resp.reqack.head.events = 0;
   resp.reqack.result = ret;
 
   if (0 == ret)
@@ -1471,8 +1505,9 @@ prepare:
 
   memset(&resp, 0, sizeof(resp));
   resp.reqack.xid = req->head.xid;
-  resp.reqack.head.msgid = USRSOCK_MESSAGE_RESPONSE_DATA_ACK;
-  resp.reqack.head.flags = 0;
+  resp.reqack.head.msgid  = USRSOCK_MESSAGE_RESPONSE_DATA_ACK;
+  resp.reqack.head.flags  = 0;
+  resp.reqack.head.events = 0;
   resp.reqack.result = ret;
 
   if (0 == ret)
@@ -1528,7 +1563,9 @@ static int ioctl_request(int fd, FAR struct gs2200m_s *priv,
   struct usrsock_message_req_ack_s resp;
   struct usrsock_message_datareq_ack_s resp2;
   struct gs2200m_ifreq_msg imsg;
+  uint8_t sock_type;
   bool getreq = false;
+  bool drvreq = true;
   int ret = -EINVAL;
 
   memset(&imsg.ifr, 0, sizeof(imsg.ifr));
@@ -1536,26 +1573,68 @@ static int ioctl_request(int fd, FAR struct gs2200m_s *priv,
   switch (req->cmd)
     {
       case SIOCGIFADDR:
+      case SIOCGIFFLAGS:
       case SIOCGIFHWADDR:
       case SIOCGIWNWID:
       case SIOCGIWFREQ:
       case SIOCGIWSENS:
-        getreq = true;
+        if (priv->usock_enable)
+          {
+            getreq = true;
+          }
+        else
+          {
+            ret = -ENOTTY;
+            drvreq = false;
+          }
         break;
 
       case SIOCSIFADDR:
       case SIOCSIFDSTADDR:
       case SIOCSIFNETMASK:
+        if (priv->usock_enable)
+          {
+            read(fd, &imsg.ifr, sizeof(imsg.ifr));
+          }
+        else
+          {
+            ret = -ENOTTY;
+            drvreq = false;
+          }
+        break;
 
-        read(fd, &imsg.ifr, sizeof(imsg.ifr));
+      case SIOCDENYINETSOCK:
+
+        read(fd, &sock_type, sizeof(uint8_t));
+
+        if (sock_type == DENY_INET_SOCK_ENABLE)
+          {
+            /* Block to create INET socket */
+
+            priv->usock_enable = FALSE;
+          }
+        else
+          {
+            /* Allow to create INET socket */
+
+            priv->usock_enable = TRUE;
+          }
         break;
 
       default:
+        if (!priv->usock_enable)
+          {
+            ret = -ENOTTY;
+            drvreq = false;
+          }
         break;
     }
 
-  imsg.cmd = req->cmd;
-  ret = ioctl(priv->gsfd, GS2200M_IOC_IFREQ, (unsigned long)&imsg);
+  if (drvreq)
+    {
+      imsg.cmd = req->cmd;
+      ret = ioctl(priv->gsfd, GS2200M_IOC_IFREQ, (unsigned long)&imsg);
+    }
 
   if (!getreq)
     {
@@ -1563,7 +1642,7 @@ static int ioctl_request(int fd, FAR struct gs2200m_s *priv,
 
       memset(&resp, 0, sizeof(resp));
       resp.result = ret;
-      ret = _send_ack_common(fd, req->head.xid, &resp);
+      ret = _send_ack_common(fd, 0, req->head.xid, &resp);
 
       if (0 > ret)
         {
@@ -1575,8 +1654,9 @@ static int ioctl_request(int fd, FAR struct gs2200m_s *priv,
     {
       resp2.reqack.result = ret;
       resp2.reqack.xid = req->head.xid;
-      resp2.reqack.head.msgid = USRSOCK_MESSAGE_RESPONSE_DATA_ACK;
-      resp2.reqack.head.flags = 0;
+      resp2.reqack.head.msgid  = USRSOCK_MESSAGE_RESPONSE_DATA_ACK;
+      resp2.reqack.head.flags  = 0;
+      resp2.reqack.head.events = 0;
       resp2.valuelen_nontrunc = sizeof(imsg.ifr);
       resp2.valuelen = sizeof(imsg.ifr);
 
@@ -1642,7 +1722,7 @@ static int gs2200m_loop(FAR struct gs2200m_s *priv)
 
       if (fds[0].revents & POLLIN)
         {
-          ret = usrsock_request(fd[0], priv);
+          ret = usrsock_handle_request(fd[0], priv);
           ASSERT(0 == ret);
         }
 
@@ -1657,21 +1737,37 @@ static int gs2200m_loop(FAR struct gs2200m_s *priv)
           ret = read(fd[1], &cid, sizeof(cid));
           ASSERT(ret == sizeof(cid));
 
-          /* find usock by the cid */
+          /* Check if all socket destroy or not */
 
-          usock = gs2200m_find_socket_by_cid(priv, cid);
-
-          if (NULL == usock)
+          if (cid == DISASSOCIATION_CID)
             {
-              gs2200m_printf("=== %s: cid=%c not found (ignored)\n",
-                             __func__, cid);
+              gs2200m_printf("=== %s: Disassocitaion event\n",
+                            __func__);
+
+              /* To release sockets blocking in user-sock,
+               * send event to all opened sockets.
+               */
+
+              usock_sendevent_toall(priv, fd[0]);
             }
           else
             {
-              /* send event to call xxxx_request() */
+              /* find usock by the cid */
 
-              usock_send_event(fd[0], priv, usock,
-                               USRSOCK_EVENT_RECVFROM_AVAIL);
+              usock = gs2200m_find_socket_by_cid(priv, cid);
+
+              if (NULL == usock)
+                {
+                  gs2200m_printf("=== %s: cid=%c not found (ignored)\n",
+                                __func__, cid);
+                }
+              else
+                {
+                  /* send event to call xxxx_request() */
+
+                  usock_send_event(fd[0], priv, usock,
+                                  USRSOCK_EVENT_RECVFROM_AVAIL);
+                }
             }
         }
     }
@@ -1739,6 +1835,8 @@ int main(int argc, FAR char *argv[])
         }
     }
 
+  _daemon->usock_enable = TRUE;
+
   if ((ap_mode && (4 != argc) && (5 != argc))
       || (!ap_mode && 3 != argc))
     {
@@ -1753,7 +1851,6 @@ int main(int argc, FAR char *argv[])
   ret = gs2200m_loop(_daemon);
 
 errout:
-
   if (_daemon)
     {
       free(_daemon);

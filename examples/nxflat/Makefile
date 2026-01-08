@@ -1,6 +1,8 @@
 ############################################################################
 # apps/examples/nxflat/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -25,6 +27,8 @@ include $(APPDIR)/Make.defs
 CSRCS = romfs.c
 CSRCS += dirlist.c
 CSRCS += symtab.c
+tests$(DELIM)symtab.c_CFLAGS = -fno-builtin
+tests$(DELIM)symtab.c_CELFFLAGS = -fno-builtin
 MAINSRC = nxflat_main.c
 
 PROGNAME = nxflat

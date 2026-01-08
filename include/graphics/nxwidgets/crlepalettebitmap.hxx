@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/include/graphics/nxwidgets/crlepalettebitmap.hxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -63,12 +65,12 @@ namespace NXWidgets
 
   struct SRlePaletteBitmap
   {
-    uint8_t          bpp;     /**< Bits per pixel */
-    uint8_t          fmt;     /**< Color format */
-    uint8_t          nlut;    /**< Number of colors in the Look-Up Table (LUT) */
-    nxgl_coord_t     width;   /**< Width in pixels */
-    nxgl_coord_t     height;  /**< Height in rows */
-    FAR const void  *lut[2];  /**< Pointers to the beginning of the Look-Up Tables (LUTs) */
+    uint8_t         bpp;     /**< Bits per pixel */
+    uint8_t         fmt;     /**< Color format */
+    uint8_t         nlut;    /**< Number of colors in the Look-Up Table (LUT) */
+    nxgl_coord_t    width;   /**< Width in pixels */
+    nxgl_coord_t    height;  /**< Height in rows */
+    FAR const void *lut[2];  /**< Pointers to the beginning of the Look-Up Tables (LUTs) */
 
     /**
      * The pointer to the beginning of the RLE data

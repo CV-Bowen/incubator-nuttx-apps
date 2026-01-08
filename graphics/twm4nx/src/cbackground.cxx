@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/graphics/twm4nx/include/cbackground.cxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -24,8 +26,9 @@
 
 #include <nuttx/config.h>
 
-#include <cfcntl>
 #include <cerrno>
+
+#include <fcntl.h>
 
 #include <nuttx/nx/nxglib.h>
 

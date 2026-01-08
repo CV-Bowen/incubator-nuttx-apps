@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/graphics/nxwm/src/nxwm_main.cxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -26,8 +28,8 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <cunistd>
 
+#include <unistd.h>
 #include <sys/boardctl.h>
 
 #ifdef CONFIG_NXWM_TOUCHSCREEN_CONFIGDATA
@@ -604,7 +606,7 @@ int main(int argc, char *argv[])
       printf("nxwm_main: Waiting for touchscreen calibration\n");
       while (!g_nxwmtest.touchscreen->isCalibrated())
         {
-          std::sleep(2);
+          sleep(2);
         }
 
       // This is how we would then recover the calibration data.  After the

@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/graphics/twm4nx/src/ccalibration.cxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -25,14 +27,14 @@
 #include <nuttx/config.h>
 
 #include <cinttypes>
-#include <cunistd>
-#include <csched>
 #include <cassert>
 #include <cerrno>
 
 #include <limits.h>
 #include <semaphore.h>
 #include <debug.h>
+#include <sched.h>
+#include <unistd.h>
 
 #include <nuttx/semaphore.h>
 #include <nuttx/nx/nxbe.h>
@@ -126,7 +128,6 @@ CCalibration::CCalibration(FAR CTwm4Nx *twm4nx)
 
   sem_init(&m_exclSem, 0, 1);
   sem_init(&m_synchSem, 0, 0);
-  sem_setprotocol(&m_synchSem, SEM_PRIO_NONE);
 }
 
 /**

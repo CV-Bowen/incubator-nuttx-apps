@@ -1,6 +1,8 @@
 ############################################################################
 # apps/system/nxplayer/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -23,6 +25,9 @@ include $(APPDIR)/Make.defs
 # NxPlayer Library
 
 CSRCS     = nxplayer.c
+CSRCS    += nxplayer_common.c
+CSRCS    += nxplayer_mp3.c
+CSRCS    += nxplayer_sbc.c
 
 ifneq ($(CONFIG_NXPLAYER_COMMAND_LINE),)
 PROGNAME  = nxplayer

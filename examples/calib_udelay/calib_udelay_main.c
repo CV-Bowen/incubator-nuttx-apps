@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/calib_udelay/calib_udelay_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -29,20 +31,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <unistd.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
 #ifndef CONFIG_EXAMPLES_CALIB_UDELAY_NUM_MEASUREMENTS
-# define CONFIG_EXAMPLES_CALIB_UDELAY_NUM_MEASUREMENTS 3
+#  define CONFIG_EXAMPLES_CALIB_UDELAY_NUM_MEASUREMENTS 3
 #endif
 
 #ifndef CONFIG_EXAMPLES_CALIB_UDELAY_NUM_RESULTS
-# define CONFIG_EXAMPLES_CALIB_UDELAY_NUM_RESULTS 20
+#  define CONFIG_EXAMPLES_CALIB_UDELAY_NUM_RESULTS 20
 #endif
 
-#define DELAY_TEST_ITERS 100000
+#define DELAY_TEST_ITERS CONFIG_EXAMPLES_CALIB_UDELAY_DELAY_TEST_ITERATIONS
 
 /****************************************************************************
  * Private Types

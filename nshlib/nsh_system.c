@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/nshlib/nsh_system.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -24,13 +26,33 @@
 
 #include <nuttx/config.h>
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
 #include "nsh.h"
 #include "nsh_console.h"
+
+/****************************************************************************
+ * Static Functions
+ ****************************************************************************/
+
+static int nsh_system_(int argc, FAR char *argv[], int isctty)
+{
+  FAR struct console_stdio_s *pstate = nsh_newconsole(isctty);
+  int ret;
+
+  DEBUGASSERT(pstate != NULL);
+
+  /* Execute the session */
+
+  ret = nsh_session(pstate, NSH_LOGIN_NONE, argc, argv);
+
+  /* Exit upon return */
+
+  nsh_exit(&pstate->cn_vtbl, ret);
+  return ret;
+}
 
 /****************************************************************************
  * Public Functions
@@ -57,17 +79,29 @@
 
 int nsh_system(int argc, FAR char *argv[])
 {
-  FAR struct console_stdio_s *pstate = nsh_newconsole(false);
-  int ret;
+  return nsh_system_(argc, argv, false);
+}
 
-  DEBUGASSERT(pstate != NULL);
+/****************************************************************************
+ * Name: nsh_system_ctty
+ *
+ * Description:
+ *   This is the NSH-specific implementation of the standard system()
+ *   command.
+ *
+ *   NOTE:
+ *   This difference with nsh_system: newconsole set isctty true
+ *
+ * Input Parameters:
+ *   Standard task start-up arguments.  Expects argc == 2 with argv[1] being
+ *   the command to execute
+ *
+ * Returned Values:
+ *   EXIT_SUCCESS or EXIT_FAILURE
+ *
+ ****************************************************************************/
 
-  /* Execute the session */
-
-  ret = nsh_session(pstate, false, argc, argv);
-
-  /* Exit upon return */
-
-  nsh_exit(&pstate->cn_vtbl, ret);
-  return ret;
+int nsh_system_ctty(int argc, FAR char *argv[])
+{
+  return nsh_system_(argc, argv, true);
 }

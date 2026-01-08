@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/nshlib/nsh_fsutils.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -27,15 +29,95 @@
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <dirent.h>
 #include <assert.h>
+#include <unistd.h>
+
+#include <nuttx/lib/lib.h>
 
 #include "nsh.h"
 #include "nsh_console.h"
+
+/****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+struct getpid_arg_s
+{
+  FAR const char *name;
+  FAR pid_t *pids;
+  size_t count;
+  size_t next;
+};
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: getpid_callback
+ *
+ * Description:
+ *   It is a callback function of nsh_getpid
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_FS_PROCFS
+static int getpid_callback(FAR struct nsh_vtbl_s *vtbl,
+                           FAR const char *dirpath,
+                           FAR struct dirent *entryp, FAR void *pvarg)
+{
+  FAR struct getpid_arg_s *arg = (FAR struct getpid_arg_s *)pvarg;
+  FAR char *buffer;
+  int fd;
+  int len;
+
+  if (arg->next == arg->count)
+    {
+      return -E2BIG;
+    }
+
+  buffer = lib_get_pathbuffer();
+  if (buffer == NULL)
+    {
+      return -errno;
+    }
+
+  /* Match the name of the process */
+
+  snprintf(buffer, PATH_MAX, "%s/%s/cmdline", dirpath, entryp->d_name);
+  fd = open(buffer, O_RDONLY | O_CLOEXEC);
+  if (fd < 0)
+    {
+      lib_put_pathbuffer(buffer);
+      return 0;
+    }
+
+  len = read(fd, buffer, PATH_MAX - 1);
+  close(fd);
+  if (len < 0)
+    {
+      lib_put_pathbuffer(buffer);
+      return -errno;
+    }
+
+  buffer[len] = '\0';
+  len = strlen(arg->name);
+  if (strncmp(buffer, arg->name, len) == 0 &&
+      (isspace(buffer[len]) || buffer[len] == '\0'))
+    {
+        arg->pids[arg->next++] = atoi(entryp->d_name);
+    }
+
+  lib_put_pathbuffer(buffer);
+  return OK;
+}
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -67,23 +149,20 @@ int nsh_catfile(FAR struct nsh_vtbl_s *vtbl, FAR const char *cmd,
 
   /* Open the file for reading */
 
-  fd = open(filepath, O_RDONLY);
+  fd = open(filepath, O_RDONLY | O_CLOEXEC);
   if (fd < 0)
     {
 #if defined(CONFIG_NSH_PROC_MOUNTPOINT)
       if (strncmp(filepath, CONFIG_NSH_PROC_MOUNTPOINT,
-                  strlen(CONFIG_NSH_PROC_MOUNTPOINT)) == 0)
+                  sizeof(CONFIG_NSH_PROC_MOUNTPOINT) - 1) == 0)
         {
           nsh_error(vtbl,
-                    "nsh: %s: Could not open %s (is procfs mounted?): %d\n",
-                    cmd, filepath, NSH_ERRNO);
+                    "nsh: %s: Could not open %s (is procfs mounted?)\n",
+                    cmd, filepath);
         }
-      else
 #endif
-        {
-          nsh_error(vtbl, g_fmtcmdfailed, cmd, "open", NSH_ERRNO);
-        }
 
+      nsh_error(vtbl, g_fmtcmdfailed, cmd, "open", NSH_ERRNO);
       return ERROR;
     }
 
@@ -187,7 +266,7 @@ int nsh_catfile(FAR struct nsh_vtbl_s *vtbl, FAR const char *cmd,
  *
  * Description:
  *   Read a small file into a user-provided buffer.  The data is assumed to
- *   be a string and is guaranteed to be NUL-termined.  An error occurs if
+ *   be a string and is guaranteed to be NUL-terminated.  An error occurs if
  *   the file content (+terminator)  will not fit into the provided 'buffer'.
  *
  * Input Parameters:
@@ -215,7 +294,7 @@ int nsh_readfile(FAR struct nsh_vtbl_s *vtbl, FAR const char *cmd,
 
   /* Open the file */
 
-  fd = open(filepath, O_RDONLY);
+  fd = open(filepath, O_RDONLY | O_CLOEXEC);
   if (fd < 0)
     {
       nsh_error(vtbl, g_fmtcmdfailed, cmd, "open", NSH_ERRNO);
@@ -265,7 +344,7 @@ int nsh_readfile(FAR struct nsh_vtbl_s *vtbl, FAR const char *cmd,
         {
           /* Successful read.  Make sure that the buffer is null terminated */
 
-          DEBUGASSERT(nread <= remaining);
+          DEBUGASSERT(nread <= (ssize_t)remaining);
           ntotal += nread;
           buffer[ntotal] = '\0';
 
@@ -295,8 +374,8 @@ int nsh_readfile(FAR struct nsh_vtbl_s *vtbl, FAR const char *cmd,
  * Input Paratemets:
  *   vtbl     - session vtbl
  *   cmd      - NSH command name to use in error reporting
- *   buffer   - The pointer of writting buffer
- *   len      - The length of writting buffer
+ *   buffer   - The pointer of writing buffer
+ *   len      - The length of writing buffer
  *   filepath - The full path to the file to be dumped
  *
  * Returned Value:
@@ -314,23 +393,20 @@ int nsh_writefile(FAR struct nsh_vtbl_s *vtbl, FAR const char *cmd,
 
   /* Open the file for reading */
 
-  fd = open(filepath, O_WRONLY);
+  fd = open(filepath, O_WRONLY | O_CLOEXEC);
   if (fd < 0)
     {
 #if defined(CONFIG_NSH_PROC_MOUNTPOINT)
       if (strncmp(filepath, CONFIG_NSH_PROC_MOUNTPOINT,
-                  strlen(CONFIG_NSH_PROC_MOUNTPOINT)) == 0)
+                  sizeof(CONFIG_NSH_PROC_MOUNTPOINT) - 1) == 0)
         {
           nsh_error(vtbl,
-                    "nsh: %s: Could not open %s (is procfs mounted?): %d\n",
-                    cmd, filepath, NSH_ERRNO);
+                    "nsh: %s: Could not open %s (is procfs mounted?)\n",
+                    cmd, filepath);
         }
-      else
 #endif
-        {
-          nsh_error(vtbl, g_fmtcmdfailed, cmd, "open", NSH_ERRNO);
-        }
 
+      nsh_error(vtbl, g_fmtcmdfailed, cmd, "open", NSH_ERRNO);
       return ERROR;
     }
 
@@ -381,18 +457,15 @@ int nsh_foreach_direntry(FAR struct nsh_vtbl_s *vtbl, FAR const char *cmd,
 
 #if defined(CONFIG_NSH_PROC_MOUNTPOINT)
       if (strncmp(dirpath, CONFIG_NSH_PROC_MOUNTPOINT,
-                  strlen(CONFIG_NSH_PROC_MOUNTPOINT)) == 0)
+                  sizeof(CONFIG_NSH_PROC_MOUNTPOINT) - 1) == 0)
         {
           nsh_error(vtbl,
-                    "nsh: %s: Could not open %s (is procfs mounted?): %d\n",
-                    cmd, dirpath, NSH_ERRNO);
-        }
-      else
-#endif
-        {
-          nsh_error(vtbl, g_fmtnosuch, cmd, "directory", dirpath);
+                    "nsh: %s: Could not open %s (is procfs mounted?)\n",
+                    cmd, dirpath);
         }
 
+#endif
+      nsh_error(vtbl, g_fmtcmdfailed, cmd, "opendir", NSH_ERRNO);
       return ERROR;
     }
 
@@ -495,7 +568,7 @@ FAR char *nsh_trimspaces(FAR char *str)
  * Name: nsh_getdirpath
  *
  * Description:
- *   Combine dirpath with a file/path, this will genarated a new string,
+ *   Combine dirpath with a file/path, this will generated a new string,
  *   which need free outside.
  *
  * Input Parameters:
@@ -522,7 +595,49 @@ FAR char *nsh_getdirpath(FAR struct nsh_vtbl_s *vtbl,
       snprintf(vtbl->iobuffer, IOBUFFERSIZE, "%s/%s", dirpath, path);
     }
 
-  vtbl->iobuffer[PATH_MAX] = '\0';
-  return strdup(vtbl->iobuffer);
+  return lib_realpath(vtbl->iobuffer, NULL, true);
+}
+#endif
+
+/****************************************************************************
+ * Name: nsh_getpid
+ *
+ * Description:
+ *   Obtain pid through process name
+ *
+ * Input Parameters:
+ *   vtbl    - NSH session data
+ *   name    - the name of the process
+ *   pids    - allocated array for storing pid
+ *   count   - the maximum number of pids obtained
+ *
+ * Returned value:
+ *   the actual number of pids obtained
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_FS_PROCFS
+ssize_t nsh_getpid(FAR struct nsh_vtbl_s *vtbl, FAR const char *name,
+                   FAR pid_t *pids, size_t count)
+{
+  struct getpid_arg_s argv =
+    {
+      name,
+      pids,
+      count,
+      0
+    };
+
+  if (NULL == name || pids == NULL)
+    {
+      return -EINVAL;
+    }
+
+  /* No need to determine the return value */
+
+  nsh_foreach_direntry(vtbl, "pidof", CONFIG_NSH_PROC_MOUNTPOINT,
+                       getpid_callback, &argv);
+
+  return argv.next;
 }
 #endif

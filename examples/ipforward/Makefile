@@ -1,6 +1,8 @@
 ############################################################################
 # apps/examples/ipforward/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -20,14 +22,14 @@
 
 include $(APPDIR)/Make.defs
 
-# Hello, World! built-in application info
+# IPFORWARD built-in application info
 
 PROGNAME = $(CONFIG_EXAMPLES_IPFORWARD_PROGNAME)
 PRIORITY = $(CONFIG_EXAMPLES_IPFORWARD_PRIORITY)
 STACKSIZE = $(CONFIG_EXAMPLES_IPFORWARD_STACKSIZE)
 MODULE = $(CONFIG_EXAMPLES_IPFORWARD)
 
-# Hello, World! Example
+# IPFORWARD Example
 
 MAINSRC = ipforward.c
 

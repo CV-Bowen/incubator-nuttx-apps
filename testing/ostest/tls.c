@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/testing/ostest/tls.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -23,18 +25,23 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/tls.h>
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
-#include <nuttx/arch.h>
-#include <nuttx/tls.h>
-
 #include "ostest.h"
 
-#if CONFIG_TLS_NELEM > 0
+#if defined(CONFIG_TLS_NELEM) && CONFIG_TLS_NELEM > 0
+
+/****************************************************************************
+ * Preprocessor Definitions
+ ****************************************************************************/
+
+#define copy_tls_info(a, b) memcpy(a, b, sizeof(struct tls_info_s))
 
 /****************************************************************************
  * Private Data
@@ -48,17 +55,17 @@ static struct tls_info_s g_save_info;
 
 static void get_tls_info(FAR struct tls_info_s *info)
 {
-  memcpy(info, up_tls_info(), sizeof(struct tls_info_s));
+  copy_tls_info(info, tls_get_info());
 }
 
 static void put_tls_info(FAR const struct tls_info_s *info)
 {
-  memcpy(up_tls_info(), info, sizeof(struct tls_info_s));
+  copy_tls_info(tls_get_info(), info);
 }
 
 static void set_tls_info(uintptr_t value)
 {
-  FAR struct tls_info_s *info = up_tls_info();
+  FAR struct tls_info_s *info = tls_get_info();
   int i;
 
   for (i = 0; i < CONFIG_TLS_NELEM; i++)
@@ -69,7 +76,7 @@ static void set_tls_info(uintptr_t value)
 
 static bool verify_tls_info(uintptr_t value)
 {
-  FAR struct tls_info_s *info = up_tls_info();
+  FAR struct tls_info_s *info = tls_get_info();
   bool fail = false;
   int i;
 
@@ -80,6 +87,7 @@ static bool verify_tls_info(uintptr_t value)
           printf("tls: ERROR Element %d: Set %lx / read %lx\n",
                  i, (unsigned long)value,
                  (unsigned long)info->tl_elem[i]);
+          ASSERT(false);
           fail = true;
         }
     }

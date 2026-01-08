@@ -1,6 +1,8 @@
 ############################################################################
 # apps/examples/thttpd/content/Makefile.nxflat
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -45,7 +47,7 @@ $(foreach DIR, $(SUBDIRS), $(eval $(call DIR_template,$(DIR),install)))
 # Install each program in the romfs directory
 
 install: $(foreach DIR, $(SUBDIRS), $(DIR)_install)
-	$(Q) ( for file in $(INSTALL_FILES); do\
+	$(Q) (for file in $(INSTALL_FILES); do \
 		install -m 0644 -D $${file} $(ROMFS_DIR)/$${file}; \
 	done; )
 

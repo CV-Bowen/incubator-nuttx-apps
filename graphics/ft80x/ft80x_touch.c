@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/graphics/ft80x/ft80x_touch.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -29,6 +31,7 @@
 #include <signal.h>
 #include <assert.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include <nuttx/lcd/ft80x.h>
 
@@ -94,7 +97,8 @@ int ft80x_touch_gettransform(int fd, FAR uint32_t matrix[6])
  *
  * Returned Value:
  *   A value of 1-255 is returned if a graphics object is touched.  Zero is
- *   returned if no graphics object is touched.  A negated errno value on failure.
+ *   returned if no graphics object is touched.  A negated errno value on
+ *   failure.
  *
  ****************************************************************************/
 
@@ -138,7 +142,8 @@ int ft80x_touch_tag(int fd)
  *
  * Returned Value:
  *   A value of 1-255 is returned if a graphics object is touched.  Zero is
- *   returned if no graphics object is touched.  A negated errno value on failure.
+ *   returned if no graphics object is touched.  A negated errno value on
+ *   failure.
  *
  ****************************************************************************/
 
@@ -224,7 +229,9 @@ int ft80x_touch_waittag(int fd, uint8_t oldtag)
       ioctl(fd, FT80X_IOC_EVENTNOTIFY,
             (unsigned long)((uintptr_t)&notify));
 
-      /* Check if the signal was received correctly or if the timeout occurred. */
+      /* Check if the signal was received correctly or if the timeout
+       * occurred.
+       */
 
       if (ret < 0)
         {
@@ -261,7 +268,8 @@ int ft80x_touch_waittag(int fd, uint8_t oldtag)
  *
  * Returned Value:
  *   A value of 1-255 is returned if a graphics object is touched.  Zero is
- *   returned if no graphics object is touched.  A negated errno value on failure.
+ *   returned if no graphics object is touched.  A negated errno value on
+ *   failure.
  *
  ****************************************************************************/
 

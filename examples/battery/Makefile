@@ -1,5 +1,7 @@
 ############################################################################
-# apps/examples/batt/Makefile
+# apps/examples/battery/Makefile
+#
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -27,7 +29,7 @@ PRIORITY  = $(CONFIG_EXAMPLES_BATTERY_PRIORITY)
 STACKSIZE = $(CONFIG_EXAMPLES_BATTERY_STACKSIZE)
 MODULE    = $(CONFIG_EXAMPLES_BATTERY)
 
-# Hello, World! Example
+# Battery Example
 
 MAINSRC = batt_main.c
 

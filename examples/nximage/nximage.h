@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/nximage/nximage.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -111,9 +113,6 @@
 #ifndef CONFIG_EXAMPLES_NXIMAGE_SERVERPRIO
 #  define CONFIG_EXAMPLES_NXIMAGE_SERVERPRIO 120
 #endif
-#ifndef CONFIG_EXAMPLES_NXIMAGE_NOTIFYSIGNO
-#  define CONFIG_EXAMPLES_NXIMAGE_NOTIFYSIGNO 4
-#endif
 
 /* Image Information ********************************************************/
 
@@ -197,7 +196,8 @@ void nximage_image(NXWINDOW hwnd);
 /* Image interfaces */
 
 nxgl_mxpixel_t nximage_bgcolor(void);
-nxgl_mxpixel_t nximage_avgcolor(nxgl_mxpixel_t color1, nxgl_mxpixel_t color2);
+nxgl_mxpixel_t nximage_avgcolor(nxgl_mxpixel_t color1,
+                                nxgl_mxpixel_t color2);
 void nximage_blitrow(FAR nxgl_mxpixel_t *run, FAR const void **state);
 
 #endif /* __APPS_EXAMPLES_NXIMAGE_NXIMAGE_H */

@@ -1,15 +1,11 @@
 /****************************************************************************
  * apps/include/netutils/webclient.h
- * Header file for the HTTP client
  *
- *   Copyright (C) 2007, 2009, 2011, 2015 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * Based remotely on the uIP webclient which also has a BSD style license:
- *
- *   Author: Adam Dunkels <adam@dunkels.com>
- *   Copyright (c) 2002, Adam Dunkels.
- *   All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2007, 2009, 2011, 2015 Gregory Nutt.
+ * SPDX-FileCopyrightText: 2002 Adam Dunkels.
+ * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
+ * SPDX-FileContributor: Adam Dunkels <adam@sics.se>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,6 +45,7 @@
 #include <nuttx/config.h>
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <sys/types.h>
 
 /****************************************************************************
@@ -101,14 +98,30 @@
  * the name resolution in a blocking manner.
  */
 
-#define	WEBCLIENT_FLAG_NON_BLOCKING	1U
+#define WEBCLIENT_FLAG_NON_BLOCKING 1U
+
+/* WEBCLIENT_FLAG_TUNNEL: Establish a tunnel
+ *
+ * If WEBCLIENT_FLAG_TUNNEL is set, ctx->url is ignored and
+ * tunnel_target_host and tunnel_target_port members are used instead.
+ *
+ * Once a tunnel is established, webclient_perform returns success,
+ * keeping the tunneled connection open.
+ *
+ * After the successful (0-returning) call of webclient_perform,
+ * the user can use webclient_get_tunnel only once.
+ * webclient_get_tunnel effectively detaches the returned
+ * webclient_conn_s from the context. It's users' responsibility
+ * to dispose the connection.
+ */
+#define WEBCLIENT_FLAG_TUNNEL 2U
 
 /* The following WEBCLIENT_FLAG_xxx constants are for
  * webclient_poll_info::flags.
  */
 
-#define	WEBCLIENT_POLL_INFO_WANT_READ	1U
-#define	WEBCLIENT_POLL_INFO_WANT_WRITE	2U
+#define WEBCLIENT_POLL_INFO_WANT_READ  1U
+#define WEBCLIENT_POLL_INFO_WANT_WRITE 2U
 
 /****************************************************************************
  * Public types
@@ -218,6 +231,7 @@ typedef CODE int (*webclient_body_callback_t)(
 
 struct webclient_tls_connection;
 struct webclient_poll_info;
+struct webclient_conn_s;
 
 struct webclient_tls_ops
 {
@@ -236,6 +250,25 @@ struct webclient_tls_ops
   CODE int (*get_poll_info)(FAR void *ctx,
                             FAR struct webclient_tls_connection *conn,
                             FAR struct webclient_poll_info *info);
+
+  /* init_connection: Initialize TLS over an existing connection
+   *
+   * This method is used for https proxy, which is essentially
+   * tunnelling over http.
+   *
+   * hostname parameter is supposed to be used for server certificate
+   * validation.
+   *
+   * This method can be NULL.
+   * In that case, webclient_perform fails with -ENOTSUP
+   * when it turns out that tunnelling is necessary.
+   */
+
+  CODE int (*init_connection)(FAR void *ctx,
+                              FAR struct webclient_conn_s *conn,
+                              FAR const char *hostname,
+                              unsigned int timeout_second,
+                              FAR struct webclient_tls_connection **connp);
 };
 
 /* Note on webclient_client lifetime
@@ -258,13 +291,27 @@ struct webclient_tls_ops
  *      |        |
  * webclient_perform
  *      |
- *      +---------------+
- *      |               |
- *      |             non-blocking mode,
- *      |             returns -EAGAIN
- *      |               |
- *      v               v
- *     DONE           IN-PROGRESS
+ *      |
+ *      +-- non-blocking mode, returns -EAGAIN ---> IN-PROGRESS
+ *      |
+ *      +-- returns -errno ---> DONE
+ *      |
+ *     returns 0
+ *      |
+ *      +-- !WEBCLIENT_FLAG_TUNNEL --> DONE
+ *      |
+ *      +-- WEBCLIENT_FLAG_TUNNEL, http_status 2xx -----> TUNNEL_ESTABLISHED
+ *      |
+ *      +-- WEBCLIENT_FLAG_TUNNEL, http_status others --> DONE
+ *
+ *
+ *  TUNNEL_ESTABLISHED
+ *      |
+ * webclient_get_tunnel
+ *      |
+ *      v
+ *     DONE
+ *
  *
  * (uninitialized):
  *   After the memory for webclient_context is allocated,
@@ -304,6 +351,10 @@ struct webclient_tls_ops
  *
  *   If the application wants to reuse the context for another request,
  *   it should initialize it with webclient_set_defaults() again.
+ *
+ * TUNNEL_ESTABLISHED
+ *   webclient_get_tunnel() should be called exactly once to return
+ *   the established tunnel.
  */
 
 struct webclient_context
@@ -316,9 +367,17 @@ struct webclient_context
    *   url              - A pointer to a string containing the full URL.
    *                      (e.g., http://www.nutt.org/index.html, or
    *                       http://192.168.23.1:80/index.html)
+   *   proxy            - A pointer to a string containing the proxy string.
+   *                      (e.g., http://myproxy:1080)
+   *                      NULL means no proxy. This is the default.
+   *                      Only http:// protocol is implemented.
    *   unix_socket_path - If not NULL, the path to an AF_LOCAL socket.
    *   headers          - An array of pointers to the extra headers.
    *   nheaders         - The number of elements in the "headers" array.
+   *   proxy_headers    - An array of pointers to the extra headers for
+   *                      the proxy connection.
+   *   proxy_nheaders   - The number of elements in the "headers" array for
+   *                      the proxy connection.
    *   bodylen          - The size of the request body.
    *   timeout_sec      - The timeout in second.
    *                      This is not meant to cover the entire transaction.
@@ -337,13 +396,23 @@ struct webclient_context
 
   FAR const char *method;
   FAR const char *url;
+  FAR const char *proxy;
 #if defined(CONFIG_WEBCLIENT_NET_LOCAL)
   FAR const char *unix_socket_path;
 #endif
   FAR const char * FAR const *headers;
   unsigned int nheaders;
+
+  FAR const char * FAR const *proxy_headers;
+  unsigned int proxy_nheaders;
+
   size_t bodylen;
   unsigned int timeout_sec;
+
+  /* Parameters for WEBCLIENT_FLAG_TUNNEL */
+
+  FAR const char *tunnel_target_host;
+  uint16_t tunnel_target_port;
 
   /* other parameters
    *
@@ -403,6 +472,7 @@ struct webclient_context
     WEBCLIENT_CONTEXT_STATE_IN_PROGRESS,
     WEBCLIENT_CONTEXT_STATE_ABORTED,
     WEBCLIENT_CONTEXT_STATE_DONE,
+    WEBCLIENT_CONTEXT_STATE_TUNNEL_ESTABLISHED,
   } state;
 #endif
 };
@@ -413,6 +483,25 @@ struct webclient_poll_info
 
   int fd;
   unsigned int flags; /* OR'ed WEBCLIENT_POLL_INFO_xxx flags */
+};
+
+struct webclient_conn_s
+{
+  bool tls;
+
+  /* for !tls */
+
+  int sockfd;
+  unsigned int flags;
+
+  /* for tls */
+
+  FAR struct webclient_tls_connection *tls_conn;
+
+  /* for tls, same as webclient_context */
+
+  FAR const struct webclient_tls_ops *tls_ops;
+  FAR void *tls_ctx;
 };
 
 /****************************************************************************
@@ -473,6 +562,15 @@ void webclient_set_static_body(FAR struct webclient_context *ctx,
                                size_t bodylen);
 int webclient_get_poll_info(FAR struct webclient_context *ctx,
                             FAR struct webclient_poll_info *info);
+void webclient_get_tunnel(FAR struct webclient_context *ctx,
+                          FAR struct webclient_conn_s **connp);
+
+ssize_t webclient_conn_send(FAR struct webclient_conn_s *conn,
+                            FAR const void *buffer, size_t len);
+ssize_t webclient_conn_recv(FAR struct webclient_conn_s *conn,
+                            FAR void *buffer, size_t len);
+void webclient_conn_close(FAR struct webclient_conn_s *conn);
+void webclient_conn_free(FAR struct webclient_conn_s *conn);
 
 #undef EXTERN
 #ifdef __cplusplus

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/system/zmodem/zm.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -577,9 +579,7 @@ uint32_t zm_filecrc(FAR struct zm_state_s *pzm, FAR const char *filename);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SERIAL_TERMIOS
 void zm_rawmode(int fd);
-#endif
 
 /****************************************************************************
  * Name: zm_flowc

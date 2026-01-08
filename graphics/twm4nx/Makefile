@@ -1,6 +1,8 @@
 ############################################################################
 # apps/graphics/twm4nx/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -22,7 +24,7 @@ include $(APPDIR)/Make.defs
 
 # Add path to cursor images to CXXFLAGS
 
-CXXFLAGS += ${shell $(INCDIR) "$(CC)" "$(APPDIR)/graphics/nxglyphs/include"}
+CXXFLAGS += ${INCDIR_PREFIX}"$(APPDIR)/graphics/nxglyphs/include"
 
 # Twm4Nx built-in application info
 

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/sx127x_demo/sx127x_demo.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -28,7 +30,6 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
-#include <unistd.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -464,7 +465,7 @@ int main(int argc, FAR char *argv[])
   if (ret != OK)
     {
       printf("sx127x_main: validate arguments failed!\n");
-      goto errout;
+      return 0;
     }
 
   printf("Start sx127x_demo\n");
@@ -476,7 +477,7 @@ int main(int argc, FAR char *argv[])
     {
       int errcode = errno;
       printf("ERROR: Failed to open device %s: %d\n", DEV_NAME, errcode);
-      goto errout;
+      return 0;
     }
 
   /* Set modulation */

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/tftpc/tftpc_packets.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -122,13 +124,16 @@ int tftp_sockinit(struct sockaddr_in *server, in_addr_t addr)
  *
  ****************************************************************************/
 
-int tftp_mkreqpacket(uint8_t *buffer, int opcode, const char *path,
-                     bool binary)
+int tftp_mkreqpacket(uint8_t *buffer, size_t len, int opcode,
+                     const char *path, bool binary)
 {
+  int ret;
+
   buffer[0] = opcode >> 8;
   buffer[1] = opcode & 0xff;
-  return sprintf((char *)&buffer[2], "%s%c%s", path, 0,
+  ret = snprintf((char *)&buffer[2], len - 2, "%s%c%s", path, 0,
                  tftp_mode(binary)) + 3;
+  return ret < len ? ret : len;
 }
 
 /****************************************************************************

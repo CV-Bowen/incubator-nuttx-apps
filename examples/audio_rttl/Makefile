@@ -1,5 +1,7 @@
 ############################################################################
-# audio_beep/Makefile
+# apps/examples/audio_rttl/Makefile
+#
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -19,7 +21,6 @@
 ############################################################################
 
 include $(APPDIR)/Make.defs
--include $(SDKDIR)/Make.defs
 
 # Audio application info
 
@@ -30,14 +31,5 @@ STACKSIZE = $(CONFIG_EXAMPLES_AUDIO_SOUND_STACKSIZE)
 # Audio Example
 
 MAINSRC = audio_rttl.cxx
-
-# Audio Example paths
-
-AUDIODIR = $(SDKDIR)$(DELIM)modules$(DELIM)audio
-
-# Audio Example flags
-
-CXXFLAGS += ${shell $(INCDIR) "$(CC)" "$(AUDIODIR)"}
-CXXFLAGS += -D_POSIX
 
 include $(APPDIR)/Application.mk

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/mld/mld_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -359,31 +361,28 @@ int main(int argc, FAR char *argv[])
 
   /* Set up a routing table entry for the address of the multicast group */
 
-  memset(&target, 0, sizeof(struct sockaddr_in6));
+  memset(&target, 0, sizeof(target));
   target.sin6_family  = AF_INET6;
   target.sin6_port    = HTONS(0x4321);
-  memcpy(target.sin6_addr.s6_addr16, g_grp_addr, sizeof(struct in6_addr));
+  memcpy(v6_addr->sin6_addr.s6_addr16, g_grp_addr, sizeof(struct in6_addr));
 
-  memset(&netmask, 0, sizeof(struct sockaddr_in6));
+  memset(&netmask, 0, sizeof(netmask));
   netmask.sin6_family  = AF_INET6;
   netmask.sin6_port    = HTONS(0x4321);
-  memset(netmask.sin6_addr.s6_addr16, 0xff, sizeof(struct in6_addr));
+  memset(v6_addr->sin6_addr.s6_addr16, 0xff, sizeof(struct in6_addr));
 
-  memset(&router, 0, sizeof(struct sockaddr_in6));
+  memset(&router, 0, sizeof(router));
   router.sin6_family  = AF_INET6;
   router.sin6_port    = HTONS(0x4321);
 
-  ret = netlib_get_ipv6addr("eth0", &router.sin6_addr);
+  ret = netlib_get_ipv6addr("eth0", &v6_addr->sin6_addr);
   if (ret < 0)
     {
       fprintf(stderr, "ERROR: netlib_get_ipv6addr() failed: %d\n", ret);
     }
   else
     {
-      ret = addroute(sockfd,
-                     (FAR struct sockaddr_storage *)&target,
-                     (FAR struct sockaddr_storage *)&netmask,
-                     (FAR struct sockaddr_storage *)&router);
+      ret = addroute(sockfd, &target, &netmask, &router, sizeof(router));
       if (ret < 0)
         {
           fprintf(stderr, "ERROR: addroute() failed: %d\n", errno);
@@ -405,9 +404,7 @@ int main(int argc, FAR char *argv[])
         }
     }
 
-  ret = delroute(sockfd,
-                 (FAR struct sockaddr_storage *)&target,
-                 (FAR struct sockaddr_storage *)&netmask);
+  ret = delroute(sockfd, &target, &netmask, sizeof(target));
   if (ret < 0)
     {
       fprintf(stderr, "ERROR: delroute() failed: %d\n", errno);

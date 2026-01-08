@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/tftpc/tftpc_internal.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -158,7 +160,7 @@
 /* Defined in tftp_packet.c *************************************************/
 
 extern int tftp_sockinit(struct sockaddr_in *server, in_addr_t addr);
-extern int tftp_mkreqpacket(uint8_t *buffer, int opcode,
+extern int tftp_mkreqpacket(uint8_t *buffer, size_t len, int opcode,
                             const char *path, bool binary);
 extern int tftp_mkackpacket(uint8_t *buffer, uint16_t blockno);
 extern int tftp_mkerrpacket(uint8_t *buffer, uint16_t errorcode,
@@ -173,9 +175,9 @@ extern ssize_t tftp_sendto(int sd, const void *buf,
                            size_t len, struct sockaddr_in *to);
 
 #ifdef CONFIG_NETUTILS_TFTP_DUMPBUFFERS
-# define tftp_dumpbuffer(msg, buffer, nbytes) ninfodumpbuffer(msg, buffer, nbytes)
+#  define tftp_dumpbuffer(msg, buffer, nbytes) ninfodumpbuffer(msg, buffer, nbytes)
 #else
-# define tftp_dumpbuffer(msg, buffer, nbytes)
+#  define tftp_dumpbuffer(msg, buffer, nbytes)
 #endif
 
 #endif /* __APPS_NETUTILS_TFTP_TFTPC_INTERNAL_H */

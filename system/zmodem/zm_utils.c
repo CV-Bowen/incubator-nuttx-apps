@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/system/zmodem/zm_utils.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,7 +32,8 @@
 #include <termios.h>
 #include <assert.h>
 #include <errno.h>
-#include <crc32.h>
+
+#include <nuttx/crc32.h>
 
 #include "zm.h"
 
@@ -475,7 +478,6 @@ uint32_t zm_filecrc(FAR struct zm_state_s *pzm, FAR const char *filename)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SERIAL_TERMIOS
 void zm_rawmode(int fd)
 {
   struct termios term;
@@ -484,7 +486,6 @@ void zm_rawmode(int fd)
   cfmakeraw(&term);
   tcsetattr(fd, TCSANOW, &term);
 }
-#endif
 
 /****************************************************************************
  * Name: zm_flowc

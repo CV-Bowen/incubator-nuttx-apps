@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/tftpc/tftpc_get.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -153,8 +155,8 @@ int tftpget_cb(FAR const char *remote, in_addr_t addr, bool binary,
 
           if (blockno == 1)
             {
-              len             = tftp_mkreqpacket(packet, TFTP_RRQ, remote,
-                                                 binary);
+              len             = tftp_mkreqpacket(packet, TFTP_IOBUFSIZE,
+                                                 TFTP_RRQ, remote, binary);
               server.sin_port = HTONS(CONFIG_NETUTILS_TFTP_PORT);
               ret             = tftp_sendto(sd, packet, len, &server);
               if (ret != len)

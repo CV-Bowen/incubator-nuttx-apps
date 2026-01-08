@@ -1,5 +1,7 @@
-/************************************************************************************
+/****************************************************************************
  * apps/system/termcurses/termcurses.c
+ *
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -16,11 +18,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
-/************************************************************************************
+/****************************************************************************
  * Included Files
- ************************************************************************************/
+ ****************************************************************************/
 
 #include <nuttx/config.h>
 
@@ -36,9 +38,9 @@
 
 #include "tcurses_priv.h"
 
-/************************************************************************************
+/****************************************************************************
  * Private Data
- ************************************************************************************/
+ ****************************************************************************/
 
 static struct termcurses_dev_s *g_termcurses_devices[] =
 {
@@ -48,18 +50,18 @@ static struct termcurses_dev_s *g_termcurses_devices[] =
   NULL
 };
 
-/************************************************************************************
+/****************************************************************************
  * Public Functions
- ************************************************************************************/
+ ****************************************************************************/
 
-/************************************************************************************
+/****************************************************************************
  * Name: termcurses_initterm
  *
  * Description:
  *    Allocate and initialize a termcurses_s context based on the provided
  *    term_type string.  If the string is NULL, defaults to "vt100".
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 int termcurses_initterm(FAR const char *term_type, int in_fd, int out_fd,
                         FAR struct termcurses_s **term)
@@ -78,7 +80,7 @@ int termcurses_initterm(FAR const char *term_type, int in_fd, int out_fd,
         {
           /* Default to vt100 as a last resort */
 
-          term_type = (FAR const char *) "vt100";
+          term_type = "vt100";
         }
     }
 
@@ -115,18 +117,18 @@ int termcurses_initterm(FAR const char *term_type, int in_fd, int out_fd,
   return -ENOSYS;
 }
 
-/************************************************************************************
+/****************************************************************************
  * Name: termcurses_deinitterm
  *
  * Description:
  *    Free all space for the termcurses terminal and perform any specific
  *    de-initialization tasks.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 int termcurses_deinitterm(FAR struct termcurses_s *term)
 {
-  FAR struct termcurses_dev_s *dev = (FAR struct termcurses_dev_s *) term;
+  FAR struct termcurses_dev_s *dev = (FAR struct termcurses_dev_s *)term;
   int result = OK;
 
   /* Call the dev function */
@@ -144,17 +146,17 @@ int termcurses_deinitterm(FAR struct termcurses_s *term)
   return result;
 }
 
-/************************************************************************************
+/****************************************************************************
  * Name: termcurses_moveyx
  *
  * Description:
  *   Move to location yx (row,col) on terminal
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 int termcurses_moveyx(FAR struct termcurses_s *term, int row, int col)
 {
-  FAR struct termcurses_dev_s *dev = (FAR struct termcurses_dev_s *) term;
+  FAR struct termcurses_dev_s *dev = (FAR struct termcurses_dev_s *)term;
 
   /* Call the dev function */
 
@@ -166,18 +168,18 @@ int termcurses_moveyx(FAR struct termcurses_s *term, int row, int col)
   return -ENOSYS;
 }
 
-/************************************************************************************
+/****************************************************************************
  * Name: termcurses_setcolors
  *
  * Description:
  *   Configure output text to render in the specified fg/bg colors.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 int termcurses_setcolors(FAR struct termcurses_s *term,
                          FAR struct termcurses_colors_s *colors)
 {
-  FAR struct termcurses_dev_s *dev = (FAR struct termcurses_dev_s *) term;
+  FAR struct termcurses_dev_s *dev = (FAR struct termcurses_dev_s *)term;
 
   /* Call the dev function */
 
@@ -189,17 +191,18 @@ int termcurses_setcolors(FAR struct termcurses_s *term,
   return -ENOSYS;
 }
 
-/************************************************************************************
+/****************************************************************************
  * Name: termcurses_setattribute
  *
  * Description:
  *   Configure output text to render in the specified fg/bg colors.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
-int termcurses_setattribute(FAR struct termcurses_s *term, unsigned long attrib)
+int termcurses_setattribute(FAR struct termcurses_s *term,
+                            unsigned long attrib)
 {
-  FAR struct termcurses_dev_s *dev = (FAR struct termcurses_dev_s *) term;
+  FAR struct termcurses_dev_s *dev = (FAR struct termcurses_dev_s *)term;
 
   /* Call the dev function */
 
@@ -211,17 +214,18 @@ int termcurses_setattribute(FAR struct termcurses_s *term, unsigned long attrib)
   return -ENOSYS;
 }
 
-/************************************************************************************
+/****************************************************************************
  * Name: termcurses_getwinsize
  *
  * Description:
  *   Get size of terminal screen in terms of character rows and cols.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
-int termcurses_getwinsize(FAR struct termcurses_s *term, FAR struct winsize *winsz)
+int termcurses_getwinsize(FAR struct termcurses_s *term,
+                          FAR struct winsize *winsz)
 {
-  FAR struct termcurses_dev_s *dev = (FAR struct termcurses_dev_s *) term;
+  FAR struct termcurses_dev_s *dev = (FAR struct termcurses_dev_s *)term;
 
   /* Call the dev function */
 
@@ -233,18 +237,18 @@ int termcurses_getwinsize(FAR struct termcurses_s *term, FAR struct winsize *win
   return -ENOSYS;
 }
 
-/************************************************************************************
+/****************************************************************************
  * Name: termcurses_getkeycode
  *
  * Description:
  *   Get a translated key code from the terminal input.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 int termcurses_getkeycode(FAR struct termcurses_s *term, FAR int *specialkey,
       int *keymodifiers)
 {
-  FAR struct termcurses_dev_s *dev = (FAR struct termcurses_dev_s *) term;
+  FAR struct termcurses_dev_s *dev = (FAR struct termcurses_dev_s *)term;
 
   /* Call the dev function */
 
@@ -256,17 +260,17 @@ int termcurses_getkeycode(FAR struct termcurses_s *term, FAR int *specialkey,
   return -1;
 }
 
-/************************************************************************************
+/****************************************************************************
  * Name: termcurses_checkkey
  *
  * Description:
  *   Check if there is a key waiting to be processed.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 bool termcurses_checkkey(FAR struct termcurses_s *term)
 {
-  FAR struct termcurses_dev_s *dev = (FAR struct termcurses_dev_s *) term;
+  FAR struct termcurses_dev_s *dev = (FAR struct termcurses_dev_s *)term;
 
   /* Call the dev function */
 

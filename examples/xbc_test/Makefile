@@ -1,5 +1,7 @@
 ############################################################################
-# apps/examples/hello/Makefile
+# apps/examples/xbc_test/Makefile
+#
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -27,7 +29,7 @@ PRIORITY = $(CONFIG_EXAMPLES_XBC_TEST_PRIORITY)
 STACKSIZE = $(CONFIG_EXAMPLES_XBC_TEST_STACKSIZE)
 MODULE = $(CONFIG_EXAMPLES_XBC_TEST)
 
-# Xbc_Test, World! Example
+# Xbc_Test Example
 
 MAINSRC = xbc_test_main.c
 

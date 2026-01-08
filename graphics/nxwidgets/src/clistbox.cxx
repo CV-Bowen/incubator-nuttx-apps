@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/graphics/nxwidgets/src/clistbox.cxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -481,7 +483,7 @@ void CListBox::drawContents(CGraphicsPort *port)
   int y = m_canvasY + (topOption * optionHeight);
   int i = topOption;
 
-  const CListBoxDataItem *item = (CListBoxDataItem *)NULL;
+  const CListBoxDataItem *item = NULL;
 
   // Loop through all options drawing each ones
 

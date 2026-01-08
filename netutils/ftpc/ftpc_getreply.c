@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/ftpc/ftpc_getreply.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -238,7 +240,7 @@ int fptc_getreply(struct ftpc_session_s *session)
     {
       /* Multi-line response */
 
-      strncpy(tmp, session->reply, 3);
+      strlcpy(tmp, session->reply, sizeof(tmp));
       do
         {
           if (ftpc_gets(session) == -1)

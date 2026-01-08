@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/nxtext/nxtext_internal.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -87,7 +89,7 @@
 #    define CONFIG_EXAMPLES_NXTEXT_BGCOLOR 0x7b5d
 #  else
 #    define CONFIG_EXAMPLES_NXTEXT_BGCOLOR ' '
-# endif
+#  endif
 #endif
 
 /* Pop-up font ID */
@@ -105,7 +107,7 @@
 #    define CONFIG_EXAMPLES_NXTEXT_PUCOLOR 0xdefb
 #  else
 #    define CONFIG_EXAMPLES_NXTEXT_PUCOLOR '2'
-# endif
+#  endif
 #endif
 
 /* Background font ID */

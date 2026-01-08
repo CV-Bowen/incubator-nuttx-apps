@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/include/graphics/twm4nx/apps/ccalibration.hxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -146,7 +148,6 @@ namespace Twm4Nx
       struct nxgl_point_s        m_touchPos;       /**< This is the last touch position */
       volatile uint8_t           m_calthread;      /**< Current calibration display state (See ECalibThreadState)*/
       uint8_t                    m_calphase;       /**< Current calibration display state (See ECalibrationPhase)*/
-      bool                       m_stop;           /**< True: We have been asked to stop the calibration */
       bool                       m_touched;        /**< True: The screen is touched */
       struct STouchSample        m_sample;         /**< Catches new touch samples */
 #ifdef CONFIG_TWM4NX_CALIBRATION_AVERAGE

@@ -1,5 +1,7 @@
 ############################################################################
-# apps/examples/esp32himem/Make.defs
+# apps/examples/esp32_himem/Make.defs
+#
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with

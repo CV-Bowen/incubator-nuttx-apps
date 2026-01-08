@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/pca9635/pca9635_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,6 +32,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <nuttx/leds/pca9635pw.h>
 
@@ -59,7 +62,7 @@ int main(int argc, FAR char *argv[])
   int fd;
   int ret;
 
-  fd = open(CONFIG_EXAMPLES_PCA9635_DEVNAME, O_WRONLY);
+  fd = open(CONFIG_EXAMPLES_PCA9635_DEVNAME, 0);
   if (fd < 0)
     {
       fprintf(stderr, "ERROR: Failed to open %s: %d\n",

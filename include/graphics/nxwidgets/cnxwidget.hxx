@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/include/cnxwidget.hxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -397,7 +399,7 @@ namespace NXWidgets
               nxgl_coord_t x, nxgl_coord_t y,
               nxgl_coord_t width, nxgl_coord_t height,
               uint32_t flags,
-              FAR const CWidgetStyle *style = (FAR const CWidgetStyle *)NULL);
+              FAR const CWidgetStyle *style = NULL);
 
     /**
      * Destructor.

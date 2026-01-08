@@ -1,6 +1,8 @@
 ############################################################################
 # apps/interpreters/lua/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -30,15 +32,15 @@ MODULE    = $(CONFIG_INTERPRETERS_LUA)
 # Lua library
 
 LUA_VERSION  = $(patsubst "%",%,$(strip $(CONFIG_INTERPRETER_LUA_VERSION)))
-LUA_TARBALL  = lua-$(LUA_VERSION).tar.gz
-LUA_UNPACK   = lua-$(LUA_VERSION)
-LUA_URL_BASE = http://www.lua.org/ftp
+LUA_TARBALL  = v$(LUA_VERSION).tar.gz
+LUA_UNPACK   = lua
+LUA_URL_BASE = https://github.com/lua/lua/archive/refs/tags/
 LUA_URL      = $(LUA_URL_BASE)/$(LUA_TARBALL)
-LUA_SRC      = $(LUA_UNPACK)$(DELIM)src
+LUA_SRC      = $(LUA_UNPACK)
 
 MAINSRC       = $(LUA_SRC)$(DELIM)lua.c
 CORELIBS_SRCS = $(filter-out $(LUA_SRC)$(DELIM)lauxlib.c,$(wildcard $(LUA_SRC)$(DELIM)*lib.c))
-EXCLUDE_SRCS  = $(MAINSRC) $(CORELIBS_SRCS) $(LUA_SRC)$(DELIM)luac.c $(LUA_SRC)$(DELIM)linit.c
+EXCLUDE_SRCS  = $(MAINSRC) $(CORELIBS_SRCS) $(LUA_SRC)$(DELIM)onelua.c $(LUA_SRC)$(DELIM)luac.c $(LUA_SRC)$(DELIM)linit.c
 CSRCS         = $(filter-out $(EXCLUDE_SRCS),$(wildcard $(LUA_SRC)$(DELIM)*.c))
 CSRCS        += nuttx_linit.c
 
@@ -60,7 +62,7 @@ endif
 ifeq ($(CONFIG_SYSTEM_READLINE),y)
 CFLAGS += -include "system/readline.h"
 CFLAGS += -D'lua_initreadline(L)=((void)L)'
-CFLAGS += -D'lua_readline(L,b,p)=((void)L,fputs(p,stdout),fflush(stdout),readline(b,LUA_MAXINPUT,stdin,stdout))'
+CFLAGS += -D'lua_readline(L,b,p)=((void)L,fputs(p,stdout),fflush(stdout),readline_stream(b,LUA_MAXINPUT,stdin,stdout))'
 CFLAGS += -D'lua_saveline(L,line)={(void)L;(void)line;}'
 CFLAGS += -D'lua_freeline(L,line)={(void)L;(void)b;}'
 endif
@@ -70,12 +72,14 @@ endif
 $(LUA_TARBALL):
 	$(Q) echo "Downloading $(LUA_TARBALL)"
 	$(Q) curl -O -L $(LUA_URL)
-
-$(LUA_UNPACK): $(LUA_TARBALL)
 	$(Q) echo "Unpacking $(LUA_TARBALL) to $(LUA_UNPACK)"
 	$(Q) tar -xvzf $(LUA_TARBALL)
+	$(Q) mv lua-$(LUA_VERSION) $(LUA_UNPACK)
 
-context:: $(LUA_UNPACK)
+# Download and unpack tarball if no git repo found
+ifeq ($(wildcard $(LUA_UNPACK)/.git),)
+context:: $(LUA_TARBALL)
+endif
 
 # Register core modules
 
@@ -129,7 +133,9 @@ clean_context::
 
 distclean:: clean_context clean
 	$(call DELFILE, registry$(DELIM).updated)
+ifeq ($(wildcard $(LUA_UNPACK)/.git),)
 	$(call DELDIR, $(LUA_UNPACK))
 	$(call DELFILE, $(LUA_TARBALL))
+endif
 
 include $(APPDIR)/Application.mk

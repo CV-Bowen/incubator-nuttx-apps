@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/poll/host.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -85,18 +87,20 @@ int main(int argc, char **argv, char **envp)
   myaddr.sin_addr.s_addr = inet_addr(TARGETIP);
 
   printf("client: Connecting to %s...\n", TARGETIP);
-  if (connect( sockfd, (struct sockaddr*)&myaddr, sizeof(struct sockaddr_in)) < 0)
+  if (connect(sockfd, (struct sockaddr *)&myaddr,
+              sizeof(struct sockaddr_in)) < 0)
     {
       printf("client: connect failure: %d\n", errno);
       goto errout_with_socket;
     }
+
   printf("client: Connected\n");
 
   /* Then send and receive messages */
 
   for (i = 0; ; i++)
     {
-      sprintf(outbuf, "Remote message %d", i);
+      snprintf(outbuf, sizeof(outbuf), "Remote message %d", i);
       len = strlen(outbuf);
 
       printf("client: Sending '%s' (%d bytes)\n", outbuf, len);
@@ -110,7 +114,8 @@ int main(int argc, char **argv, char **envp)
         }
       else if (nbytessent != len)
         {
-          printf("client: Bad send length: %d Expected: %d\n", nbytessent, len);
+          printf("client: Bad send length: %d Expected: %d\n",
+                 nbytessent, len);
           goto errout_with_socket;
         }
 
@@ -133,7 +138,8 @@ int main(int argc, char **argv, char **envp)
 
       if (nbytesrecvd != len)
         {
-          printf("client: Bad recv length: %d Expected: %d\n", nbytesrecvd, len);
+          printf("client: Bad recv length: %d Expected: %d\n",
+                 nbytesrecvd, len);
           goto errout_with_socket;
         }
       else if (memcmp(inbuf, outbuf, len) != 0)

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/wireless/bluetooth/btsak/btsak_security.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -33,6 +35,7 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include <nuttx/wireless/bluetooth/bt_core.h>
 #include <nuttx/wireless/bluetooth/bt_hci.h>
@@ -82,7 +85,7 @@ static void btsak_security_showusage(FAR const char *progname,
   fprintf(stderr,
           "\toutput capabilities).\n\n");
   fprintf(stderr, "Usage:\n\n");
-  fprintf(stderr, "\t%s <ifname> %s [-h] <addr> public|private <level>\n",
+  fprintf(stderr, "\t%s <ifname> %s [-h] <addr> public|random <level>\n",
           progname, cmd);
   fprintf(stderr,
           "\nWhere:\n\n");
@@ -145,7 +148,7 @@ void btsak_cmd_security(FAR struct btsak_s *btsak, int argc,
   /* The first argument must be an address of the form xx:xx:xx:xx:xx:xx */
 
   memset(&btreq, 0, sizeof(struct btreq_s));
-  strncpy(btreq.btr_name, btsak->ifname, IFNAMSIZ);
+  strlcpy(btreq.btr_name, btsak->ifname, IFNAMSIZ);
 
   ret = btsak_str2addr(argv[1], btreq.btr_secaddr.val);
   if (ret < 0)

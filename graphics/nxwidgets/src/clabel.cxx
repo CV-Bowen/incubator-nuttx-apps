@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/graphics/nxwidgets/src/clabel.cxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -179,7 +181,7 @@ void CLabel::appendText(const CNxString &text)
  * @param index Index at which to insert the text.
  */
 
-void CLabel::insertText(const CNxString &text, const int index)
+void CLabel::insertText(const CNxString &text, const unsigned int index)
 {
   m_text.insert(text, index);
   onTextChange();

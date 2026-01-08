@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/wireless/bluetooth/btsak/btsak_scan.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -33,6 +35,7 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include <nuttx/wireless/bluetooth/bt_ioctl.h>
 
@@ -83,7 +86,7 @@ static void btsak_cmd_scanstart(FAR struct btsak_s *btsak, FAR char *cmd,
   int ret;
 
   memset(&btreq, 0, sizeof(struct btreq_s));
-  strncpy(btreq.btr_name, btsak->ifname, IFNAMSIZ);
+  strlcpy(btreq.btr_name, btsak->ifname, IFNAMSIZ);
 
   /* Check if an option was provided */
 
@@ -140,7 +143,7 @@ static void btsak_cmd_scanget(FAR struct btsak_s *btsak, FAR char *cmd,
   /* Perform the IOCTL to get the scan results so far */
 
   memset(&btreq, 0, sizeof(struct btreq_s));
-  strncpy(btreq.btr_name, btsak->ifname, IFNAMSIZ);
+  strlcpy(btreq.btr_name, btsak->ifname, IFNAMSIZ);
   btreq.btr_nrsp = 5;
   btreq.btr_rsp  = result;
 
@@ -168,7 +171,7 @@ static void btsak_cmd_scanget(FAR struct btsak_s *btsak, FAR char *cmd,
           for (i = 0; i < btreq.btr_nrsp; i++)
             {
               rsp = &result[i];
-              printf("%2d.\taddr:           "
+              printf("%2d.\taddr:            "
                      "%02x:%02x:%02x:%02x:%02x:%02x type: %d\n",
                      i + 1,
                      rsp->sr_addr.val[5], rsp->sr_addr.val[4],
@@ -218,7 +221,7 @@ static void btsak_cmd_scanstop(FAR struct btsak_s *btsak, FAR char *cmd,
   /* Perform the IOCTL to stop scanning and flush any buffered responses. */
 
   memset(&btreq, 0, sizeof(struct btreq_s));
-  strncpy(btreq.btr_name, btsak->ifname, IFNAMSIZ);
+  strlcpy(btreq.btr_name, btsak->ifname, IFNAMSIZ);
 
   sockfd = btsak_socket(btsak);
   if (sockfd >= 0)

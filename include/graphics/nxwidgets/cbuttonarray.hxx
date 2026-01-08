@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/include/graphics/nxwidgets/cbuttonarray.hxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -191,7 +193,7 @@ namespace NXWidgets
                  nxgl_coord_t x, nxgl_coord_t y,
                  uint8_t buttonColumns, uint8_t buttonRows,
                  nxgl_coord_t buttonWidth, nxgl_coord_t buttonHeight,
-                 CWidgetStyle *style = (CWidgetStyle *)NULL);
+                 CWidgetStyle *style = NULL);
 
     /**
      * CButtonArray Destructor.

@@ -1,5 +1,7 @@
 ############################################################################
-# apps/examples/elf/tests/hello/Makefile
+# apps/examples/posix_spawn/filesystem/hello/Makefile
+#
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with

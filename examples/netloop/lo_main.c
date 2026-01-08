@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/netloop/lo_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -152,7 +154,7 @@ static int lo_client(void)
 
   for (i = 0; ; i++)
     {
-      sprintf(outbuf, "Loopback message %d", i);
+      snprintf(outbuf, sizeof(outbuf), "Loopback message %d", i);
       len = strlen(outbuf);
 
       printf("lo_client: Sending '%s' (%d bytes)\n", outbuf, len);

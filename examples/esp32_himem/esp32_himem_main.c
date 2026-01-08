@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/esp32_himem/esp32_himem_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -23,11 +25,13 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <assert.h>
+#include <unistd.h>
 
 #include <nuttx/himem/himem.h>
 
@@ -58,7 +62,7 @@ static bool check_mem(void *mem, int len, int phys_addr)
         if (val != *p)
           {
             printf("check_mem: %x has 0x%08x expected 0x%08x\n",
-                   phys_addr + ((char *) p - (char *) mem), *p, val);
+                   phys_addr + ((char *)p - (char *)mem), *p, val);
             return false;
           }
         p++;

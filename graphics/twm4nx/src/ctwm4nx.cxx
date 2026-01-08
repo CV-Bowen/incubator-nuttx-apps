@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/graphics/twm4nx/src/ctwm4nx.cxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -41,11 +43,11 @@
 #include <cstdbool>
 #include <csignal>
 #include <cstdio>
-#include <cfcntl>
 #include <cstring>
 #include <cassert>
 #include <cerrno>
 
+#include <fcntl.h>
 #include <semaphore.h>
 
 #include <nuttx/semaphore.h>
@@ -382,7 +384,10 @@ void CTwm4Nx::genMqName(void)
   unsigned long randvalue =
     (unsigned long)std::random() & 0x00fffffful;
 
-  std::asprintf(&m_queueName, "Twm4Nx%06lu", randvalue);
+  if (std::asprintf(&m_queueName, "Twm4Nx%06lu", randvalue) < 0)
+    {
+      m_queueName = NULL;
+    }
 }
 
 /**

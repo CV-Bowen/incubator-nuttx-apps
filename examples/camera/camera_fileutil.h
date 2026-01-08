@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/camera/camera_fileutil.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -34,11 +36,11 @@
 
 /* Initialize file util of camera example */
 
-const char *futil_initialize(void);
+FAR const char *futil_initialize(void);
 
 /* Write an image file */
 
-int futil_writeimage(uint8_t *data, size_t len, const char *fsuffix);
+int futil_writeimage(FAR uint8_t *data, size_t len, FAR const char *fsuffix);
 
 #endif  /* __APPS_EXAMPLES_CAMERA_CAMERA_FILEUTIL_H */
 

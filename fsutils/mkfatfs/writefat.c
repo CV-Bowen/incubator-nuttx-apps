@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/fsutils/mkfatfs/writefat.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,6 +32,7 @@
 #include <string.h>
 #include <errno.h>
 #include <debug.h>
+#include <unistd.h>
 
 #include <nuttx/fs/fat.h>
 
@@ -67,7 +70,7 @@ static int mkfatfs_devwrite(FAR const struct fat_format_s *fmt,
 
   /* Convert the sector number to a byte offset */
 
-  if (sector < 0 || sector >= fmt->ff_nsectors)
+  if (sector < 0 || sector >= (off_t)fmt->ff_nsectors)
     {
       ferr("sector out of range: %ju\n", (intmax_t)sector);
       return -ESPIPE;
@@ -137,7 +140,7 @@ static inline void mkfatfs_initmbr(FAR struct fat_format_s *fmt,
 
   /* 8@3: Usually "MSWIN4.1" */
 
-  strcpy((FAR char *)&var->fv_sect[MBR_OEMNAME], "NUTTX   ");
+  memcpy(&var->fv_sect[MBR_OEMNAME], "NUTTX   ", 8);
 
   /* 2@11: Bytes per sector: 512, 1024, 2048, 4096  */
 
@@ -232,8 +235,12 @@ static inline void mkfatfs_initmbr(FAR struct fat_format_s *fmt,
 
       /* Boot code may be placed in the remainder of the sector */
 
-      memcpy(&var->fv_sect[MBR16_BOOTCODE], var->fv_bootcode,
+      memcpy(&var->fv_sect[MBR16_BOOTCODE], var->fv_bootcodeblob,
              var->fv_bootcodesize);
+
+      /* Patch in the correct offset to the boot code */
+
+      var->fv_sect[MBR16_BOOTCODE + 3] = var->fv_bootcodepatch;
     }
   else
     {
@@ -283,8 +290,12 @@ static inline void mkfatfs_initmbr(FAR struct fat_format_s *fmt,
 
       /* Boot code may be placed in the remainder of the sector */
 
-      memcpy(&var->fv_sect[MBR32_BOOTCODE], var->fv_bootcode,
+      memcpy(&var->fv_sect[MBR32_BOOTCODE], var->fv_bootcodeblob,
              var->fv_bootcodesize);
+
+      /* Patch in the correct offset to the boot code */
+
+      var->fv_sect[MBR32_BOOTCODE + 3] = var->fv_bootcodepatch;
     }
 
   /* The magic bytes at the end of the MBR are common to FAT12/16/32 */
@@ -312,6 +323,8 @@ static inline void mkfatfs_initmbr(FAR struct fat_format_s *fmt,
 static inline void mkfatfs_initfsinfo(FAR struct fat_format_s *fmt,
                                       FAR struct fat_var_s *var)
 {
+  UNUSED(fmt);
+
   memset(var->fv_sect, 0, var->fv_sectorsize);
 
   /* 4@0: 0x41615252 = "RRaA" */
@@ -473,8 +486,8 @@ static inline int mkfatfs_writefat(FAR struct fat_format_s *fmt,
                                    FAR struct fat_var_s *var)
 {
   off_t offset = fmt->ff_rsvdseccount;
-  int fatno;
-  int sectno;
+  uint8_t fatno;
+  uint32_t sectno;
   int ret;
 
   /* Loop for each FAT copy */

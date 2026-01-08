@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/foc/foc_mq.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -41,11 +43,11 @@
 int foc_mq_handle(mqd_t mq, FAR struct foc_mq_s *h)
 {
   int      ret = OK;
-  uint8_t  buffer[5];
+  uint8_t  buffer[CONTROL_MQ_MSGSIZE];
 
   /* Get data from AUX */
 
-  ret = mq_receive(mq, (char *)buffer, 5, 0);
+  ret = mq_receive(mq, (char *)buffer, CONTROL_MQ_MSGSIZE, 0);
   if (ret < 0)
     {
       if (errno != EAGAIN)
@@ -65,7 +67,7 @@ int foc_mq_handle(mqd_t mq, FAR struct foc_mq_s *h)
 
   /* Verify message length */
 
-  if (ret != 5)
+  if (ret != CONTROL_MQ_MSGSIZE)
     {
       PRINTF("ERROR: invalid message length = %d\n", ret);
       goto errout;

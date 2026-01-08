@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/webserver/httpd_sendfile.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -83,7 +85,16 @@ int httpd_sendfile_open(const char *name, struct httpd_fs_file *file)
 
   file->len = (int) st.st_size;
 
-  file->fd = open(file->path, O_RDONLY);
+  if (S_ISDIR(st.st_mode))
+    {
+      /* we assume -1 as a directory */
+
+      file->fd = -1;
+    }
+  else
+    {
+      file->fd = open(file->path, O_RDONLY);
+    }
 
 #ifndef CONFIG_NETUTILS_HTTPD_DIRLIST
   if (file->fd == -1)

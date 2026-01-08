@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/testing/ostest/sporadic.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -24,12 +26,14 @@
 
 #include <nuttx/config.h>
 
-#include <stdio.h>
-#include <unistd.h>
+#include <assert.h>
 #include <pthread.h>
-#include <semaphore.h>
 #include <sched.h>
+#include <semaphore.h>
+#include <stdio.h>
+#include <sys/param.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "ostest.h"
 
@@ -47,10 +51,6 @@
 #undef sched_unlock
 #define sched_lock()
 #define sched_unlock()
-
-#ifndef MIN
-#  define MIN(a,b) ((a) < (b) ? (a) : (b))
-#endif
 
 /****************************************************************************
  * Private Data
@@ -118,6 +118,7 @@ static void *fifo_func(void *parameter)
           if (ret < 0)
             {
               printf("ERROR: sched_getparam failed\n");
+              ASSERT(false);
               return NULL;
             }
 
@@ -155,6 +156,7 @@ static FAR void *sporadic_func(FAR void *parameter)
           if (ret < 0)
             {
               printf("ERROR: sched_getparam failed\n");
+              ASSERT(false);
               return NULL;
             }
 
@@ -218,6 +220,7 @@ void sporadic_test(void)
   if (ret != OK)
     {
       printf("sporadic_test: ERROR: sched_getparam failed, ret=%d\n", ret);
+      ASSERT(false);
     }
 
   sparam.sched_priority = prio_high + 2;
@@ -225,6 +228,7 @@ void sporadic_test(void)
   if (ret != OK)
     {
       printf("sporadic_test: ERROR: sched_setparam failed, ret=%d\n", ret);
+      ASSERT(false);
     }
 
   ret = pthread_attr_init(&attr);
@@ -232,6 +236,7 @@ void sporadic_test(void)
     {
       printf("sporadic_test: ERROR: pthread_attr_init failed, ret=%d\n",
              ret);
+      ASSERT(false);
     }
 
   /* This semaphore will prevent anything from running until we are ready */
@@ -249,6 +254,7 @@ void sporadic_test(void)
       printf("sporadic_test: ERROR: pthread_attr_setschedpolicy failed, "
              "ret=%d\n",
              ret);
+      ASSERT(false);
     }
 
   sparam.sched_priority = prio_high + 1;
@@ -258,6 +264,7 @@ void sporadic_test(void)
       printf("sporadic_test: ERROR: pthread_attr_setschedparam failed, "
              "ret=%d\n",
              ret);
+      ASSERT(false);
     }
 
   ret = pthread_create(&nuisance_thread, &attr, nuisance_func, NULL);
@@ -265,6 +272,7 @@ void sporadic_test(void)
     {
       printf("sporadic_test: ERROR: FIFO thread creation failed: %d\n",
              ret);
+      ASSERT(false);
     }
 
   /* Start a FIFO thread at the middle priority */
@@ -276,6 +284,7 @@ void sporadic_test(void)
       printf("sporadic_test: ERROR: pthread_attr_setschedparam failed, "
              "ret=%d\n",
              ret);
+      ASSERT(false);
     }
 
   ret = pthread_create(&fifo_thread, &attr, fifo_func, NULL);
@@ -283,6 +292,7 @@ void sporadic_test(void)
     {
       printf("sporadic_test: ERROR: FIFO thread creation failed: %d\n",
              ret);
+      ASSERT(false);
     }
 
   /* Start a sporadic thread, with the following parameters: */
@@ -297,6 +307,7 @@ void sporadic_test(void)
       printf("sporadic_test: ERROR: pthread_attr_setschedpolicy failed, "
              "ret=%d\n",
              ret);
+      ASSERT(false);
     }
 
   sparam.sched_priority               = prio_high;
@@ -313,6 +324,7 @@ void sporadic_test(void)
       printf("sporadic_test: ERROR: pthread_attr_setsched param failed, "
              "ret=%d\n",
              ret);
+      ASSERT(false);
     }
 
   ret = pthread_create(&sporadic_thread, &attr, sporadic_func,
@@ -321,6 +333,7 @@ void sporadic_test(void)
     {
       printf("sporadic_test: ERROR: sporadic thread creation failed: %d\n",
              ret);
+      ASSERT(false);
     }
 
   g_start_time = time(NULL);
@@ -355,6 +368,7 @@ void sporadic_test(void)
   if (ret != OK)
     {
       printf("sporadic_test: ERROR: sched_setparam failed, ret=%d\n", ret);
+      ASSERT(false);
     }
 }
 

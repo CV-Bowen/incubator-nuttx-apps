@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/system/spi/spi_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -55,7 +57,7 @@ static const struct cmdmap_s g_spicmds[] =
 {
   { "?",    spicmd_help,  "Show help     ",  NULL },
   { "bus",  spicmd_bus,   "List buses    ",  NULL },
-  { "exch",  spicmd_exch, "SPI Exchange  ", "[OPTIONS] [<hex senddata>]" },
+  { "exch", spicmd_exch,  "SPI Exchange  ", "[OPTIONS] [<hex senddata>]" },
   { "help", spicmd_help,  "Show help     ", NULL },
   { NULL,   NULL,         NULL,             NULL }
 };
@@ -122,7 +124,7 @@ static int spicmd_help(FAR struct spitool_s *spitool, int argc,
                  CONFIG_SPITOOL_DEFCMD, spitool->command);
 #endif
   spitool_printf(spitool, "  [-f freq] SPI frequency.  "
-                          "Default: %d Current: %d\n",
+                          "Default: %d Current: %" PRIu32 "\n",
                  CONFIG_SPITOOL_DEFFREQ, spitool->freq);
 
   spitool_printf(spitool, "  [-m mode] Mode for transfer.  "
@@ -130,24 +132,29 @@ static int spicmd_help(FAR struct spitool_s *spitool, int argc,
                  CONFIG_SPITOOL_DEFMODE, spitool->mode);
 
   spitool_printf(spitool, "  [-n CSn] chip select number.  "
-                          "Default: %d Current: %d\n",
+                          "Default: %d Current: %" PRIu32 "\n",
                  0, spitool->csn);
 
   spitool_printf(spitool, "  [-t devtype] Chip Select type "
                           "(see spi_devtype_e).  "
-                          "Default: %d Current: %d\n",
+                          "Default: %d Current: %" PRIu32 "\n",
                  SPIDEVTYPE_USER, spitool->devtype);
 
   spitool_printf(spitool, "  [-u udelay] Delay after transfer in uS.  "
-                          "Default: 0 Current: %d\n", spitool->udelay);
+                          "Default: 0 Current: %" PRIu32 "\n",
+                 spitool->udelay);
 
   spitool_printf(spitool, "  [-w width] Width of bus.  "
                           "Default: %d Current: %d\n",
                  CONFIG_SPITOOL_DEFWIDTH, spitool->width);
 
   spitool_printf(spitool, "  [-x count] Words to exchange  "
-                          "Default: %d Current: %d Max: %d\n",
+                          "Default: %d Current: %" PRIu32 " Max: %d\n",
                  CONFIG_SPITOOL_DEFWORDS, spitool->count, MAX_XDATA);
+
+  spitool_printf(spitool, "  [-r trans_count] Trans to exchange  "
+                          "Default: %d Current: %d Max: %d\n",
+                 CONFIG_SPITOOL_DEFTRANS, spitool->trans_count, UINT8_MAX);
 
   spitool_printf(spitool, "\nNOTES:\n");
 #ifndef CONFIG_DISABLE_ENVIRON
@@ -156,7 +163,7 @@ static int spicmd_help(FAR struct spitool_s *spitool, int argc,
 #endif
   spitool_printf(spitool, "o Arguments are \"sticky\".  "
                           "For example, once the SPI address is\n");
-  spitool_printf(spitool, "  specified, that address will be re-used "
+  spitool_printf(spitool, "  specified, that address will be reused "
                           "until it is changed.\n");
   spitool_printf(spitool, "\nWARNING:\n");
   spitool_printf(spitool, "o The SPI commands may have bad side effects "
@@ -185,8 +192,8 @@ static int spi_execute(FAR struct spitool_s *spitool, int argc,
 {
   FAR const struct cmdmap_s *cmdmap;
   FAR const char            *cmd;
-  cmd_t                  handler;
-  int                    ret;
+  cmd_t                      handler;
+  int                        ret;
 
   /* The form of argv is:
    *
@@ -395,6 +402,11 @@ int main(int argc, FAR char *argv[])
   if (g_spitool.devtype == 0)
     {
       g_spitool.devtype = SPIDEVTYPE_USER;
+    }
+
+  if (g_spitool.trans_count == 0)
+    {
+      g_spitool.trans_count = CONFIG_SPITOOL_DEFTRANS;
     }
 
   /* Parse and process the command line */

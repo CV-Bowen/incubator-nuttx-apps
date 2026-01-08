@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/testing/ostest/dev_null.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -23,9 +25,12 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
+#include <assert.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <fcntl.h>
+
 #include "ostest.h"
 
 /****************************************************************************
@@ -38,7 +43,7 @@ static FAR char buffer[1024];
  * Public Functions
  ****************************************************************************/
 
-int dev_null(void)
+int dev_null_test(void)
 {
   int nbytes;
   int fd;
@@ -47,6 +52,7 @@ int dev_null(void)
   if (fd < 0)
     {
       printf("dev_null: ERROR Failed to open /dev/null\n");
+      ASSERT(false);
       return -1;
     }
 
@@ -54,6 +60,7 @@ int dev_null(void)
   if (nbytes < 0)
     {
       printf("dev_null: ERROR Failed to read from /dev/null\n");
+      ASSERT(false);
       close(fd);
       return -1;
     }
@@ -64,6 +71,7 @@ int dev_null(void)
   if (nbytes < 0)
     {
       printf("dev_null: ERROR Failed to write to /dev/null\n");
+      ASSERT(false);
       close(fd);
       return -1;
     }

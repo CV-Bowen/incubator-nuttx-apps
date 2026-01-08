@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/nshlib/nsh_session.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -28,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <termios.h>
 
 #ifdef CONFIG_NSH_CLE
 #  include "system/cle.h"
@@ -66,18 +69,17 @@
  ****************************************************************************/
 
 int nsh_session(FAR struct console_stdio_s *pstate,
-                bool login, int argc, FAR char *argv[])
+                int login, int argc, FAR char *argv[])
 {
   FAR struct nsh_vtbl_s *vtbl;
   int ret = EXIT_FAILURE;
-  int i;
 
   DEBUGASSERT(pstate);
   vtbl = &pstate->cn_vtbl;
 
-  if (login)
-    {
 #ifdef CONFIG_NSH_CONSOLE_LOGIN
+  if (login == NSH_LOGIN_LOCAL)
+    {
       /* Login User and Password Check */
 
       if (nsh_login(pstate) != OK)
@@ -85,27 +87,40 @@ int nsh_session(FAR struct console_stdio_s *pstate,
           nsh_exit(vtbl, 1);
           return -1; /* nsh_exit does not return */
         }
+    }
+  else
 #endif /* CONFIG_NSH_CONSOLE_LOGIN */
+#ifdef CONFIG_NSH_TELNET_LOGIN
+  if (login == NSH_LOGIN_TELNET)
+    {
+      /* Login User and Password Check */
 
+      if (nsh_telnetlogin(pstate) != OK)
+        {
+          nsh_exit(vtbl, 1);
+          return -1; /* nsh_exit does not return */
+        }
+    }
+#endif /* CONFIG_NSH_TELNET_LOGIN */
+
+  if (login != NSH_LOGIN_NONE)
+    {
       /* Present a greeting and possibly a Message of the Day (MOTD) */
 
-      fputs(g_nshgreeting, pstate->cn_outstream);
+      write(OUTFD(pstate), g_nshgreeting, strlen(g_nshgreeting));
 
 #ifdef CONFIG_NSH_MOTD
-# ifdef CONFIG_NSH_PLATFORM_MOTD
+#  ifdef CONFIG_NSH_PLATFORM_MOTD
       /* Output the platform message of the day */
 
       platform_motd(vtbl->iobuffer, IOBUFFERSIZE);
-      fprintf(pstate->cn_outstream, "%s\n", vtbl->iobuffer);
-
-# else
+      dprintf(OUTFD(pstate), "%s\n", vtbl->iobuffer);
+#  else
       /* Output the fixed message of the day */
 
-      fprintf(pstate->cn_outstream, "%s\n", g_nshmotd);
-# endif
+      dprintf(OUTFD(pstate), "%s\n", g_nshmotd);
+#  endif
 #endif
-
-      fflush(pstate->cn_outstream);
 
       /* Execute the login script */
 
@@ -116,21 +131,21 @@ int nsh_session(FAR struct console_stdio_s *pstate,
 
   /* Process the command line option */
 
-  for (i = 1; i < argc; i++)
+  if (argc > 1)
     {
-      if (strcmp(argv[i], "-h") == 0)
+      if (strcmp(argv[1], "-h") == 0)
         {
           nsh_output(vtbl, "Usage: %s [<script-path>|-c <command>]\n",
                      argv[0]);
           return EXIT_SUCCESS;
         }
-      else if (strcmp(argv[i], "-c") == 0)
+      else if (strcmp(argv[1], "-c") == 0)
         {
           /* Process the inline command */
 
-          if (i + 1 < argc)
+          if (argc > 2)
             {
-              return nsh_parse(vtbl, argv[i + 1]);
+              return nsh_parse(vtbl, argv[2]);
             }
           else
             {
@@ -138,27 +153,39 @@ int nsh_session(FAR struct console_stdio_s *pstate,
               return EXIT_FAILURE;
             }
         }
-      else if (argv[i][0] != '-')
+      else if (argv[1][0] == '-')
         {
-          break;
+          /* Unknown option */
+
+          nsh_error(vtbl, g_fmtsyntax, argv[0]);
+          return EXIT_FAILURE;
         }
-
-      /* Unknown option */
-
-      nsh_error(vtbl, g_fmtsyntax, argv[0]);
-      return EXIT_FAILURE;
-    }
-
-  if (i < argc)
-    {
+      else
+        {
 #ifndef CONFIG_NSH_DISABLESCRIPT
-      /* Execute the shell script */
+          /* Execute the shell script */
 
-      return nsh_script(vtbl, argv[0], argv[i]);
+          return nsh_script(vtbl, argv[0], argv[1], true);
 #else
-      return EXIT_FAILURE;
+          return EXIT_FAILURE;
 #endif
+        }
     }
+
+#ifdef CONFIG_NSH_DISABLE_ECHOBACK
+  /* Disable echoback */
+
+  if (isatty(INFD(pstate)))
+    {
+      struct termios cfg;
+
+      if (tcgetattr(INFD(pstate), &cfg) == 0)
+        {
+          cfg.c_lflag &= ~ECHO;
+          tcsetattr(INFD(pstate), TCSANOW, &cfg);
+        }
+    }
+#endif
 
   /* Then enter the command line parsing loop */
 
@@ -182,34 +209,34 @@ int nsh_session(FAR struct console_stdio_s *pstate,
        * occurs. Either  will cause the session to terminate.
        */
 
-      ret = cle(pstate->cn_line, g_nshprompt, CONFIG_NSH_LINELEN,
-                INSTREAM(pstate), OUTSTREAM(pstate));
-      if (ret < 0)
+      ret = cle_fd(pstate->cn_line, nsh_prompt(), LINE_MAX,
+                   INFD(pstate), OUTFD(pstate));
+      if (ret == EOF)
         {
-          fprintf(pstate->cn_errstream, g_fmtcmdfailed, "nsh_session",
+          dprintf(ERRFD(pstate), g_fmtcmdfailed, "nsh_session",
                   "cle", NSH_ERRNO_OF(-ret));
-          continue;
+          ret = EXIT_SUCCESS;
+          break;
         }
 #else
       /* Display the prompt string */
 
-      fputs(g_nshprompt, pstate->cn_outstream);
-      fflush(pstate->cn_outstream);
+      write(OUTFD(pstate), nsh_prompt(), strlen(nsh_prompt()));
 
       /* readline() normally returns the number of characters read, but
        * will return EOF on end of file or if an error occurs.  EOF
        * will cause the session to terminate.
        */
 
-      ret = readline(pstate->cn_line, CONFIG_NSH_LINELEN,
-                    INSTREAM(pstate), OUTSTREAM(pstate));
+      ret = readline_fd(pstate->cn_line, LINE_MAX,
+                        INFD(pstate), OUTFD(pstate));
       if (ret == EOF)
         {
           /* NOTE: readline() does not set the errno variable, but
            * perhaps we will be lucky and it will still be valid.
            */
 
-          fprintf(pstate->cn_errstream, g_fmtcmdfailed, "nsh_session",
+          dprintf(ERRFD(pstate), g_fmtcmdfailed, "nsh_session",
                   "readline", NSH_ERRNO);
           ret = EXIT_SUCCESS;
           break;
@@ -219,7 +246,7 @@ int nsh_session(FAR struct console_stdio_s *pstate,
       /* Parse process the command */
 
       nsh_parse(vtbl, pstate->cn_line);
-      fflush(pstate->cn_outstream);
+      nsh_update_prompt();
     }
 
   return ret;

@@ -1,5 +1,7 @@
 ############################################################################
-# apps/examples/hello_zig/Make.defs
+# apps/examples/hello_zig/Makefile
+#
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -22,10 +24,10 @@ include $(APPDIR)/Make.defs
 
 # Hello, Zig! Example
 
-MAINSRC = hello_zig_main.zig
+MAINSRC = hello_zig.zig
 
 # Hello, Zig! built-in application info
-
+ZIGFLAGS += -lc -I$(TOPDIR)/include
 PROGNAME  = $(CONFIG_EXAMPLES_HELLO_ZIG_PROGNAME)
 PRIORITY  = $(CONFIG_EXAMPLES_HELLO_ZIG_PRIORITY)
 STACKSIZE = $(CONFIG_EXAMPLES_HELLO_ZIG_STACKSIZE)

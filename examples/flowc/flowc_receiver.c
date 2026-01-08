@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/flowc/flowc_receiver.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -107,7 +109,7 @@ static int flowc_cmdline(int argc, char **argv)
 
   if (argc == 2)
     {
-      strncpy(g_tty_devname, argv[1], MAX_DEVNAME);
+      strlcpy(g_tty_devname, argv[1], MAX_DEVNAME);
     }
   else if (argc != 1)
     {

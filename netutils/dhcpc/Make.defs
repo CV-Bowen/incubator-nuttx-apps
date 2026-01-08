@@ -1,4 +1,7 @@
+############################################################################
 # apps/netutils/dhcpc/Make.defs
+#
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -17,6 +20,6 @@
 #
 ############################################################################
 
-ifeq ($(CONFIG_NETUTILS_DHCPC),y)
+ifneq ($(CONFIG_NETUTILS_DHCPC),)
 CONFIGURED_APPS += $(APPDIR)/netutils/dhcpc
 endif

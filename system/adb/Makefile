@@ -1,6 +1,8 @@
 ############################################################################
 # apps/system/adb/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -20,8 +22,8 @@
 
 include $(APPDIR)/Make.defs
 
-ADBD_URL ?= "https://github.com/spiriou/microADB/archive"
-ADBD_VERSION ?= 5b3c9229e70f74fedfbbf1a0b9000836c9a34789
+ADB_URL ?= "https://github.com/spiriou/microADB/archive"
+ADB_VERSION ?= master
 
 ADB_DIR := $(APPDIR)/system/adb
 ADB_UNPACKNAME := microADB
@@ -29,17 +31,17 @@ ADB_UNPACKDIR := $(ADB_DIR)/$(ADB_UNPACKNAME)
 
 $(ADB_UNPACKDIR):
 	@echo "Downloading: $(ADB_UNPACKNAME)"
-	$(Q) curl -O -L $(ADBD_URL)/$(ADBD_VERSION).zip
-	$(Q) unzip -o $(ADBD_VERSION).zip
-	$(call DELFILE, $(ADBD_VERSION).zip)
-	$(call MOVEFILE, $(ADB_UNPACKNAME)-$(ADBD_VERSION), $(ADB_UNPACKDIR))
+	$(Q) curl -O -L $(ADB_URL)/$(ADB_VERSION).zip
+	$(Q) unzip -o $(ADB_VERSION).zip
+	$(call DELFILE, $(ADB_VERSION).zip)
+	$(call MOVEFILE, $(ADB_UNPACKNAME)-$(ADB_VERSION), $(ADB_UNPACKDIR))
 
 # adb server app
 
 PROGNAME  := $(CONFIG_ADBD_PROGNAME)
 PRIORITY  := $(CONFIG_ADBD_PRIORITY)
 STACKSIZE := $(CONFIG_ADBD_STACKSIZE)
-MODULE    := $(CONFIG_ADB_SERVER)
+MODULE    := $(CONFIG_SYSTEM_ADBD)
 
 # Files
 
@@ -59,6 +61,10 @@ endif
 
 ifeq ($(CONFIG_ADBD_USB_SERVER),y)
 CSRCS += $(ADB_UNPACKNAME)/hal/hal_uv_client_usb.c
+endif
+
+ifeq ($(CONFIG_ADBD_QEMU_SERVER),y)
+CSRCS += $(ADB_UNPACKNAME)/hal/hal_uv_client_qemu.c
 endif
 
 ifeq ($(CONFIG_ADBD_AUTHENTICATION),y)
@@ -82,12 +88,15 @@ CSRCS += $(ADB_UNPACKNAME)/tcp_service.c
 CSRCS += $(ADB_UNPACKNAME)/hal/hal_uv_socket.c
 endif
 
-context:: $(ADB_UNPACKDIR)
-
 clean::
 	$(call DELFILE, $(OBJS))
 
+# Download and unpack tarball if no git repo found
+ifeq ($(wildcard $(ADB_UNPACKDIR)/.git),)
+context:: $(ADB_UNPACKDIR)
+
 distclean::
 	$(call DELDIR, $(ADB_UNPACKDIR))
+endif
 
 include $(APPDIR)/Application.mk

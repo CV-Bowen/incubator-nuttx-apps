@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/include/industry/foc/fixed16/foc_ident.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -41,6 +43,7 @@ struct foc_routine_ident_cfg_b16_s
 {
   b16_t per;                    /* Routine period in sec */
   b16_t res_current;            /* Resistance measurement current */
+  b16_t res_ki;                 /* Resistance measurement Ki */
   b16_t ind_volt;               /* Inductance measurement current */
   int   res_steps;              /* Resistance measurement steps */
   int   ind_steps;              /* Inductance measurement steps */

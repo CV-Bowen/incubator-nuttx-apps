@@ -1,9 +1,9 @@
 /****************************************************************************
  * apps/examples/modbusmaster/mbmaster_main.c
  *
- * Copyright (c) 2016 Vytautas Lukenskas <lukevyta@gmail.com>
- * Copyright (c) 2019 Alan Carvalho de Assis <acassis@gmail.com>
- * All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2016 Vytautas Lukenskas <lukevyta@gmail.com>
+ * SPDX-FileCopyrightText: 2019 Alan Carvalho de Assis <acassis@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,10 +49,6 @@
  ****************************************************************************/
 
 /* modbus master port */
-
-#ifndef CONFIG_SERIAL_TERMIOS
-#  error "CONFIG_SERIAL_TERMIOS is needed by modbus example"
-#endif
 
 #ifdef CONFIG_EXAMPLES_MODBUSMASTER_PORT
 #  define MBMASTER_PORT CONFIG_EXAMPLES_MODBUSMASTER_PORT
@@ -284,7 +280,7 @@ int main(int argc, FAR char *argv[])
 
   if (ret != OK)
     {
-      fprintf(stderr, "mbmaster_main: ",
+      fprintf(stderr, "mbmaster_main: "
               "ERROR: mbmaster_initialize failed: %d\n", ret);
       goto errout;
     }
@@ -296,10 +292,14 @@ int main(int argc, FAR char *argv[])
 
   if (ret != OK)
     {
-      fprintf(stderr, "mbmaster_main: ",
+      fprintf(stderr, "mbmaster_main: "
               "ERROR: mbmaster_pollthread create failed: %d\n", ret);
       goto errout_with_initialize;
     }
+
+  /* Work around to give time to pthread_create run the modbus poller */
+
+  usleep(100000);
 
   printf("Sending %d requests to slave %d\n",
          MBMASTER_REQUESTS_COUNT, SLAVE_ID);

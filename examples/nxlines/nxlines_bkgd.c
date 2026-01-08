@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/nxlines/nxlines_bkgd.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -29,6 +31,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/param.h>
 #include <debug.h>
 #include <fixedmath.h>
 #include <inttypes.h>
@@ -50,10 +53,6 @@
 #  define CLEAR_WIDTH (CONFIG_EXAMPLES_NXLINES_LINEWIDTH + 2)
 #else
 #  define CLEAR_WIDTH CONFIG_EXAMPLES_NXLINES_LINEWIDTH
-#endif
-
-#ifndef MIN
-#  define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
 /****************************************************************************

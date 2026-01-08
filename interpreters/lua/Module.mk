@@ -1,6 +1,8 @@
 ############################################################################
 # apps/interpreters/lua/Module.mk
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -30,7 +32,8 @@ endef
 ifneq ($(LUAMODNAME),)
 LUAMODLIST := $(addprefix $(LUAMOD_REGISTRY)$(DELIM),$(addsuffix .bdat,$(LUAMODNAME)))
 $(LUAMODLIST): $(DEPCONFIG) Makefile
-	$(call LUAMOD_REGISTER,$(LUAMODNAME),luaopen_$(LUAMODNAME))
+	$(call LUAMOD_REGISTER,$(firstword $(LUAMODNAME)),$(firstword luaopen_$(LUAMODNAME)))
+	$(eval LUAMODNAME=$(filter-out $(firstword $(LUAMODNAME)),$(LUAMODNAME)))
 
 register:: $(LUAMODLIST)
 endif

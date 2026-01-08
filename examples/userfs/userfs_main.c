@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/userfs/userfs_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -24,12 +26,14 @@
 
 #include <nuttx/config.h>
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <fcntl.h>
 #include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <sched.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include <nuttx/fs/userfs.h>
 
@@ -520,7 +524,7 @@ static int ufstest_rename(FAR void *volinfo, FAR const char *oldrelpath,
   file = ufstest_findbyname(oldrelpath);
   if (file != NULL)
     {
-      strncpy(file->entry.d_name, newrelpath, NAME_MAX + 1);
+      strlcpy(file->entry.d_name, newrelpath, NAME_MAX);
       return OK;
     }
 

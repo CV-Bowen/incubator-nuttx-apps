@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/powermonitor/powermonitor_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -34,6 +36,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <nuttx/sensors/ltc4151.h>
 

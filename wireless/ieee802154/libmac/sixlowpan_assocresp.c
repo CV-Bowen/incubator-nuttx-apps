@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/wireless/ieee802154/libmac/sixlowpan_assocresp.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -45,7 +47,7 @@ int sixlowpan_assoc_resp(int sock, FAR const char *ifname,
   struct ieee802154_netmac_s arg;
   int ret;
 
-  strncpy(arg.ifr_name, ifname, IFNAMSIZ);
+  strlcpy(arg.ifr_name, ifname, IFNAMSIZ);
   memcpy(&arg.u.assocresp, resp, sizeof(struct ieee802154_assoc_resp_s));
 
   ret = ioctl(sock, MAC802154IOC_MLME_ASSOC_RESPONSE,

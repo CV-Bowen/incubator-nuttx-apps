@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/mcuboot/update_agent/mcuboot_agent_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -207,7 +209,8 @@ static int download_firmware_image(FAR const char *url)
 
   for (i = 0; i < MD5_DIGEST_LENGTH; i++)
     {
-      sprintf(&hash[i * 2], "%02x", digest[i]);
+      snprintf(&hash[i * 2], sizeof(hash) - i * 2,
+               "%02x", digest[i]);
     }
 
   hash[MD5_HASH_LENGTH] = '\0';

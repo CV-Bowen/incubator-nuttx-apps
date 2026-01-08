@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/nrf24l01_term/nrf24l01_term.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -28,7 +30,6 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
-#include <unistd.h>
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -192,7 +193,7 @@ int send_pkt(int wl_fd)
   len = strlen(buff);
   if (len > 0 && buff[len - 1] == '\n')
     {
-      len --;
+      len--;
       buff[len] = '\0';
     }
 
@@ -321,7 +322,8 @@ int main(int argc, FAR char *argv[])
                   goto out;
                 }
 #else
-              ret = readline(&buff[1], sizeof(buff) - 1, stdin, stdout);
+              ret = readline_stream(&buff[1], sizeof(buff) - 1,
+                                    stdin, stdout);
 
               /* Readline normally returns the number of characters read,
                * but will return EOF on end of file or if an error occurs.

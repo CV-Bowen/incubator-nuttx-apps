@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/graphics/twm4nx/src/cnxterm.cxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -26,14 +28,14 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <cunistd>
-#include <cfcntl>
 #include <ctime>
 #include <cassert>
 
 #include <sys/boardctl.h>
 #include <semaphore.h>
+#include <fcntl.h>
 #include <debug.h>
+#include <unistd.h>
 
 #include "nshlib/nshlib.h"
 
@@ -330,7 +332,7 @@ void CNxTerm::stop(void)
       // Construct the driver name using this minor number
 
       char devname[32];
-      snprintf(devname, 32, "/dev/nxterm%d", m_minor);
+      snprintf(devname, sizeof(devname), "/dev/nxterm%d", m_minor);
 
       unlink(devname);
       m_NxTerm = 0;
@@ -373,7 +375,7 @@ int CNxTerm::nxterm(int argc, char *argv[])
   // Construct the driver name using this minor number
 
   char devname[32];
-  snprintf(devname, 32, "/dev/nxterm%d", GNxTermVars.minor);
+  snprintf(devname, sizeof(devname), "/dev/nxterm%d", GNxTermVars.minor);
 
   // Increment the minor number while it is protect by the semaphore
 
@@ -402,16 +404,16 @@ int CNxTerm::nxterm(int argc, char *argv[])
   std::fflush(stderr);
 
 #ifdef CONFIG_NXTERM_NXKBDIN
-  std::dup2(fd, 0);
+  dup2(fd, 0);
 #endif
-  std::dup2(fd, 1);
-  std::dup2(fd, 2);
+  dup2(fd, 1);
+  dup2(fd, 2);
 
   // And we can close our original driver file descriptor
 
   if (fd > 2)
     {
-      std::close(fd);
+      close(fd);
     }
 
   // Inform the parent thread that we successfully initialized
@@ -574,20 +576,6 @@ bool CNxTermFactory::nshlibInitialize(void)
   // Initialize the NSH library
 
   nsh_initialize();
-
-  // If the Telnet console is selected as a front-end, then start the
-  // Telnet daemon.
-
-#ifdef CONFIG_NSH_TELNET
-  int ret = nsh_telnetstart(AF_UNSPEC);
-  if (ret < 0)
-    {
-      // The daemon is NOT running!
-
-      return false;
-   }
-#endif
-
   return true;
 }
 

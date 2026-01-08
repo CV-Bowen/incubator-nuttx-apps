@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/graphics/nxwm/src/ccalibration.cxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -23,13 +25,13 @@
  ****************************************************************************/
 
 #include <cinttypes>
-#include <cunistd>
 #include <cerrno>
 
 #include <sched.h>
 #include <limits.h>
 #include <assert.h>
 #include <debug.h>
+#include <unistd.h>
 
 #ifdef CONFIG_NXWM_TOUCHSCREEN_CONFIGDATA
 #  include "platform/configdata.h"
@@ -628,7 +630,7 @@ FAR void *CCalibration::calibration(FAR void *arg)
         {
           // Sleep for a while (or until we receive a signal)
 
-          std::usleep(500*1000);
+          usleep(500*1000);
         }
       else
         {

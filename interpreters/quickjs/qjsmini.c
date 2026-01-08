@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/interpreters/quickjs/qjsmini.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -372,7 +374,7 @@ uint8_t *js_load_file(JSContext *ctx, size_t *pbuf_len, const char *filename)
         js_free(ctx, buf);
       else
         free(buf);
-    fail:
+fail:
       fclose(f);
       return NULL;
     }

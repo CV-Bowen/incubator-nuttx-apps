@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/nxterm/nxterm_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -52,16 +54,6 @@
 #include "nshlib/nshlib.h"
 
 #include "nxterm_internal.h"
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* The NSH telnet console requires networking support (and TCP/IP) */
-
-#ifndef CONFIG_NET
-#  undef CONFIG_NSH_TELNET
-#endif
 
 /****************************************************************************
  * Public Data
@@ -222,22 +214,6 @@ int main(int argc, FAR char *argv[])
 
   printf("nxterm_main: Initialize NSH\n");
   nsh_initialize();
-
-  /* If the Telnet console is selected as a front-end, then start the
-   * Telnet daemon.
-   */
-
-#ifdef CONFIG_NSH_TELNET
-  ret = nsh_telnetstart(AF_UNSPEC);
-  if (ret < 0)
-    {
-      /* The daemon is NOT running.  Report the error then fail...
-       * either with the serial console up or just exiting.
-       */
-
-      fprintf(stderr, "ERROR: Failed to start TELNET daemon: %d\n", ret);
-    }
-#endif
 
   /* NX Initialization ******************************************************/
 

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/graphics/nxwidgets/src/ccallback.cxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -83,7 +85,6 @@ CCallback::CCallback(CWidgetControl *widgetControl)
   m_synchronized       = false;
 
   sem_init(&m_semevent, 0, 0);
-  sem_setprotocol(&m_semevent, SEM_PRIO_NONE);
 
 #ifdef CONFIG_NXTERM_NXKBDIN
   // Keyboard input is initially directed to the widgets within the window

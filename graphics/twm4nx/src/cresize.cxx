@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/graphics/twm4nx/src/cresize.cxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -37,6 +39,7 @@
 
 #include <cstdio>
 #include <cerrno>
+#include <sys/param.h>
 
 #include <nuttx/nx/nxbe.h>
 
@@ -63,10 +66,6 @@
 #define MINWIDTH      0             // had been 60
 
 #define makemult(a,b) ((b == 1) ? (a) : (((int)((a) / (b))) * (b)))
-
-#ifndef MIN
-#  define MIN(a,b)    ((a) < (b) ? (a) : (b))
-#endif
 
 /////////////////////////////////////////////////////////////////////////////
 // Class Implementations
@@ -416,6 +415,8 @@ bool CResize::setWindowSize(FAR struct nxgl_size_s *size)
 
 void CResize::updateSizeLabel(FAR struct nxgl_size_s &windowSize)
 {
+  int ret;
+
   // Do nothing if the size has not changed
 
   struct nxgl_size_s labelSize;
@@ -427,8 +428,8 @@ void CResize::updateSizeLabel(FAR struct nxgl_size_s &windowSize)
     }
 
   FAR char *str;
-  asprintf(&str, " %4d x %-4d ", windowSize.w, windowSize.h);
-  if (str == (FAR char *)0)
+  ret = asprintf(&str, " %4d x %-4d ", windowSize.w, windowSize.h);
+  if (ret < 0)
     {
       twmerr("ERROR: Failed to get size string\n");
       return;

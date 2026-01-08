@@ -7,4 +7,12 @@ config TESTING_LTP
 	tristate "Linux Test Project"
 	default n
 	---help---
-        Enable support for the Linux Test Project(LTP) framework
+		Enable support for the Linux Test Project(LTP) framework
+
+if TESTING_LTP
+
+config TESTING_LTP_STACKSIZE
+	int "Linux Test Project stack size"
+	default 8192
+
+endif #TESTING_LTP

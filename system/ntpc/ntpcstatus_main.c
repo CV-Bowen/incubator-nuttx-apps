@@ -1,5 +1,7 @@
 /****************************************************************************
- * apps/system/ntpc/ntpc_status.c
+ * apps/system/ntpc/ntpcstatus_main.c
+ *
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -23,6 +25,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/clock.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -42,10 +45,10 @@
 
 /* "-", uint64_t, ".", 9 digits fraction part, NUL */
 
-#define	NTP_TIME_STR_MAX_LEN (1 + 21 + 1 + 9 + 1)
+#define NTP_TIME_STR_MAX_LEN (1 + 21 + 1 + 9 + 1)
 
 static void
-format_ntptimestamp(int64_t ts, FAR char *buf)
+format_ntptimestamp(int64_t ts, FAR char *buf, size_t len)
 {
   FAR const char *sign;
   uint64_t absts;
@@ -61,9 +64,9 @@ format_ntptimestamp(int64_t ts, FAR char *buf)
       absts = ts;
     }
 
-  sprintf(buf, "%s%" PRIu64 ".%09" PRIu64,
-          sign, absts >> 32,
-          ((absts & 0xffffffff) * NSEC_PER_SEC) >> 32);
+  snprintf(buf, len, "%s%" PRIu64 ".%09" PRIu64,
+           sign, absts >> 32,
+           ((absts & 0xffffffff) * NSEC_PER_SEC) >> 32);
 }
 
 /****************************************************************************
@@ -115,8 +118,10 @@ int main(int argc, FAR char *argv[])
         }
 #endif
 
-      format_ntptimestamp(status.samples[i].offset, offset_buf);
-      format_ntptimestamp(status.samples[i].delay, delay_buf);
+      format_ntptimestamp(status.samples[i].offset,
+                          offset_buf, sizeof(offset_buf));
+      format_ntptimestamp(status.samples[i].delay,
+                          delay_buf, sizeof(delay_buf));
       printf("[%u] srv %s offset %s delay %s\n",
              i, name, offset_buf, delay_buf);
     }

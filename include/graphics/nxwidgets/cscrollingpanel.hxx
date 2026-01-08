@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/include/graphics/nxwidgets/cscrollingpanel.hxx
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -194,7 +196,7 @@ namespace NXWidgets
                     nxgl_coord_t x, nxgl_coord_t y,
                     nxgl_coord_t width, nxgl_coord_t height,
                     uint32_t flags,
-                    CWidgetStyle *style = (CWidgetStyle *)NULL);
+                    CWidgetStyle *style = NULL);
 
     /**
      * Scroll the panel by the specified amounts.

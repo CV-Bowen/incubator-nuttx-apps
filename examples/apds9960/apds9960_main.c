@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/apds9960/apds9960_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -28,6 +30,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include <nuttx/sensors/apds9960.h>
 
@@ -53,7 +56,7 @@ int main(int argc, FAR char *argv[])
   int nbytes;
   char gest;
 
-  fd = open(CONFIG_EXAMPLES_APDS9960_DEVNAME, O_RDONLY|O_NONBLOCK);
+  fd = open(CONFIG_EXAMPLES_APDS9960_DEVNAME, O_RDONLY | O_NONBLOCK);
   if (fd < 0)
     {
       int errcode = errno;
@@ -64,7 +67,7 @@ int main(int argc, FAR char *argv[])
 
   while (1)
     {
-      nbytes = read(fd, (void *)&gest, sizeof(gest));
+      nbytes = read(fd, &gest, sizeof(gest));
       if (nbytes == 1)
         {
           switch (gest)

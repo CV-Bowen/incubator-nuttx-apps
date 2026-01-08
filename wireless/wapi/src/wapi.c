@@ -1,14 +1,10 @@
 /****************************************************************************
  * apps/wireless/wapi/src/wapi.c
  *
- *   Copyright (C) 2011, 2017, 2019 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * Largely and original work, but highly influenced by sampled code provided
- * with WAPI:
- *
- *   Copyright (c) 2010, Volkan YAZICI <volkan.yazici@gmail.com>
- *   All rights reserved.
+ * SPDX-License-Identifier: BSD-2-Clause
+ * SPDX-FileCopyrightText: 2011,2017,2019 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2010 Volkan YAZICI <volkan.yazici@gmail.com>
+ * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,6 +40,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <strings.h>
+#include <sys/param.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -96,12 +93,15 @@ static int wapi_bitrate_cmd      (int sock, int argc, FAR char **argv);
 static int wapi_txpower_cmd      (int sock, int argc, FAR char **argv);
 static int wapi_scan_results_cmd (int sock, int argc, FAR char **argv);
 static int wapi_scan_cmd         (int sock, int argc, FAR char **argv);
+static int wapi_pscan_cmd        (int sock, int argc, FAR char **argv);
 static int wapi_country_cmd      (int sock, int argc, FAR char **argv);
 static int wapi_sense_cmd        (int sock, int argc, FAR char **argv);
 #ifdef CONFIG_WIRELESS_WAPI_INITCONF
 static int wapi_reconnect_cmd    (int sock, int argc, FAR char **argv);
 static int wapi_save_config_cmd  (int sock, int argc, FAR char **argv);
 #endif
+static int wapi_pta_prio_cmd     (int sock, int argc, FAR char **argv);
+static int wapi_power_save_cmd   (int sock, int argc, FAR char **argv);
 
 /****************************************************************************
  * Private Data
@@ -112,30 +112,31 @@ static const struct wapi_command_s g_wapi_commands[] =
   {"help",         0, 0, NULL},
   {"show",         1, 1, wapi_show_cmd},
   {"scan",         1, 2, wapi_scan_cmd},
+  {"pscan",        1, 2, wapi_pscan_cmd},
   {"scan_results", 1, 1, wapi_scan_results_cmd},
   {"ip",           2, 2, wapi_ip_cmd},
   {"mask",         2, 2, wapi_mask_cmd},
   {"freq",         3, 3, wapi_freq_cmd},
   {"essid",        3, 3, wapi_essid_cmd},
-  {"psk",          3, 3, wapi_psk_cmd},
+  {"psk",          3, 4, wapi_psk_cmd},
   {"disconnect",   1, 1, wapi_disconnect_cmd},
   {"mode",         2, 2, wapi_mode_cmd},
   {"ap",           2, 2, wapi_ap_cmd},
   {"bitrate",      3, 3, wapi_bitrate_cmd},
   {"txpower",      3, 3, wapi_txpower_cmd},
-  {"country",      2, 2, wapi_country_cmd},
+  {"country",      1, 2, wapi_country_cmd},
   {"sense",        1, 1, wapi_sense_cmd},
 #ifdef CONFIG_WIRELESS_WAPI_INITCONF
   {"reconnect",    1, 1, wapi_reconnect_cmd},
   {"save_config",  1, 1, wapi_save_config_cmd},
 #endif
+  {"pta_prio",     2, 2, wapi_pta_prio_cmd},
+  {"power_save",   2, 2, wapi_power_save_cmd},
 };
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#define NCOMMANDS (sizeof(g_wapi_commands) / sizeof(struct wapi_command_s))
 
 /* Maximum length of the PASSPHRASE, refer to IEEE802.11i specification */
 
@@ -255,10 +256,12 @@ static int wapi_show_cmd(int sock, int argc, FAR char **argv)
   char essid[WAPI_ESSID_MAX_SIZE + 1];
   enum wapi_essid_flag_e essid_flag;
   FAR const char *ifname = argv[0];
+  enum wapi_pta_prio_e pta_prio;
   enum wapi_freq_flag_e freq_flag;
   enum wapi_mode_e mode;
   struct ether_addr ap;
   struct in_addr addr;
+  char country[4];
   double tmpfreq;
   int bitrate;
   int txpower;
@@ -266,6 +269,7 @@ static int wapi_show_cmd(int sock, int argc, FAR char **argv)
   int sense;
   int chan;
   int ret;
+  char inetaddr[INET_ADDRSTRLEN];
 
   printf("%s Configuration:\n", ifname);
 
@@ -280,7 +284,8 @@ static int wapi_show_cmd(int sock, int argc, FAR char **argv)
     }
   else
     {
-      printf("       IP: %s\n", inet_ntoa(addr));
+      printf("       IP: %s\n", inet_ntoa_r(addr, inetaddr,
+                                            sizeof(inetaddr)));
     }
 
   /* Get netmask */
@@ -293,7 +298,8 @@ static int wapi_show_cmd(int sock, int argc, FAR char **argv)
     }
   else
     {
-      printf("  NetMask: %s\n", inet_ntoa(addr));
+      printf("  NetMask: %s\n", inet_ntoa_r(addr, inetaddr,
+                                            sizeof(inetaddr)));
     }
 
   /* Get frequency */
@@ -399,9 +405,26 @@ static int wapi_show_cmd(int sock, int argc, FAR char **argv)
   /* Get sensitivity */
 
   ret = wapi_get_sensitivity(sock, ifname, &sense);
-  if (ret == 0)
+  if (ret >= 0)
     {
       printf("    Sense: %d\n", sense);
+    }
+
+  /* Get Country Code */
+
+  memset(country, 0, sizeof(country));
+  ret = wapi_get_country(sock, ifname, country);
+  if (ret >= 0)
+    {
+      printf("  Country: %s\n", country);
+    }
+
+  /* Get pta prio */
+
+  ret = wapi_get_pta_prio(sock, ifname, &pta_prio);
+  if (ret >= 0)
+    {
+      printf(" PTA prio: %d\n", pta_prio);
     }
 
   return 0;
@@ -521,15 +544,97 @@ static int wapi_essid_cmd(int sock, int argc, FAR char **argv)
 static int wapi_psk_cmd(int sock, int argc, FAR char **argv)
 {
   enum wpa_alg_e alg_flag;
+  enum wpa_ver_e ver_flag;
+  uint8_t auth_wpa;
+  int passlen;
+  int cipher;
+  int ret;
+
+  /* Check if password len >= 8 && <= 63 */
+
+  passlen = strnlen(argv[1], 64);
+  if (passlen < 8 || passlen > 63)
+    {
+      printf("The password should have between 8 and 63 characters!\n");
+      return -EINVAL;
+    }
 
   /* Convert input strings to values */
 
+  if (argc > 3)
+    {
+      ver_flag = (enum wpa_ver_e)wapi_str2ndx(argv[3], g_wapi_wpa_ver_flags);
+    }
+  else
+    {
+      ver_flag = WPA_VER_2;
+    }
+
+  switch (ver_flag)
+    {
+      case WPA_VER_NONE:
+        auth_wpa = IW_AUTH_WPA_VERSION_DISABLED;
+        break;
+
+      case WPA_VER_1:
+        auth_wpa = IW_AUTH_WPA_VERSION_WPA;
+        break;
+
+      case WPA_VER_2:
+        auth_wpa = IW_AUTH_WPA_VERSION_WPA2;
+        break;
+
+      case WPA_VER_3:
+        auth_wpa = IW_AUTH_WPA_VERSION_WPA3;
+        break;
+
+      default:
+        return -EINVAL;
+    }
+
   alg_flag = (enum wpa_alg_e)wapi_str2ndx(argv[2], g_wapi_alg_flags);
 
-  /* Set the Passphrase */
+  switch (alg_flag)
+    {
+      case WPA_ALG_NONE:
+        cipher = IW_AUTH_CIPHER_NONE;
+        break;
 
-  return wpa_driver_wext_set_key_ext(sock, argv[0], alg_flag,
-                                     argv[1], strlen(argv[1]));
+      case WPA_ALG_WEP:
+        cipher = IW_AUTH_CIPHER_WEP40;
+        break;
+
+      case WPA_ALG_TKIP:
+        cipher = IW_AUTH_CIPHER_TKIP;
+        break;
+
+      case WPA_ALG_CCMP:
+        cipher = IW_AUTH_CIPHER_CCMP;
+        break;
+
+      default:
+        return -EINVAL;
+    }
+
+  ret = wpa_driver_wext_set_auth_param(sock, argv[0],
+                                       IW_AUTH_WPA_VERSION,
+                                       auth_wpa);
+  if (ret >= 0)
+    {
+      ret = wpa_driver_wext_set_auth_param(sock, argv[0],
+                                           IW_AUTH_CIPHER_PAIRWISE,
+                                           cipher);
+
+      /* Set the Passphrase */
+
+      if (ret >= 0)
+        {
+          ret = wpa_driver_wext_set_key_ext(sock, argv[0], alg_flag,
+                                            argv[1], strlen(argv[1]));
+        }
+    }
+
+  return ret;
 }
 
 /****************************************************************************
@@ -728,7 +833,8 @@ static int wapi_scan_results_cmd(int sock, int argc, FAR char **argv)
  * Name: wapi_scan_cmd
  *
  * Description:
- *   Scans available APs in the range using given ifname interface.
+ *   Use the given ifname interface and active mode to scan the APs
+ *   available in the range.
  *
  * Returned Value:
  *   None
@@ -744,7 +850,37 @@ static int wapi_scan_cmd(int sock, int argc, FAR char **argv)
 
   /* Start scan */
 
-  ret = wapi_scan_init(sock, argv[0], essid);
+  ret = wapi_escan_init(sock, argv[0], IW_SCAN_TYPE_ACTIVE, essid);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  return wapi_scan_results_cmd(sock, 1, argv);
+}
+
+/****************************************************************************
+ * Name: wapi_pscan_cmd
+ *
+ * Description:
+ *   Use the given ifname interface and passive mode to scan the APs
+ *   available in the range.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static int wapi_pscan_cmd(int sock, int argc, FAR char **argv)
+{
+  FAR const char *essid;
+  int ret;
+
+  essid = argc > 1 ? argv[1] : NULL;
+
+  /* Start scan */
+
+  ret = wapi_escan_init(sock, argv[0], IW_SCAN_TYPE_PASSIVE, essid);
   if (ret < 0)
     {
       return ret;
@@ -757,7 +893,7 @@ static int wapi_scan_cmd(int sock, int argc, FAR char **argv)
  * Name: wapi_country_cmd
  *
  * Description:
- *  Set the country code
+ *  Set/Get the country code
  *
  * Returned Value:
  *   None
@@ -766,6 +902,21 @@ static int wapi_scan_cmd(int sock, int argc, FAR char **argv)
 
 static int wapi_country_cmd(int sock, int argc, FAR char **argv)
 {
+  char country[4];
+  int ret;
+
+  if (argc == 1)
+    {
+      memset(country, 0, sizeof(country));
+      ret = wapi_get_country(sock, argv[0], country);
+      if (ret >= 0)
+        {
+          printf("%s\n", country);
+        }
+
+      return ret;
+    }
+
   return wapi_set_country(sock, argv[0], argv[1]);
 }
 
@@ -786,7 +937,7 @@ static int wapi_sense_cmd(int sock, int argc, FAR char **argv)
   int ret;
 
   ret = wapi_get_sensitivity(sock, argv[0], &sense);
-  if (ret == 0)
+  if (ret >= 0)
     {
       printf("%d\n", sense);
     }
@@ -816,7 +967,7 @@ static int wapi_reconnect_cmd(int sock, int argc, FAR char **argv)
   load = wapi_load_config(argv[0], NULL, &conf);
   if (load == NULL)
     {
-      return -1;
+      return -EINVAL;
     }
 
   ret = wpa_driver_wext_associate(&conf);
@@ -840,6 +991,7 @@ static int wapi_reconnect_cmd(int sock, int argc, FAR char **argv)
 static int wapi_save_config_cmd(int sock, int argc, FAR char **argv)
 {
   char essid[WAPI_ESSID_MAX_SIZE + 1];
+  char bssid[20];
   enum wapi_essid_flag_e essid_flag;
   struct wpa_wconfig_s conf;
   struct ether_addr ap;
@@ -857,7 +1009,7 @@ static int wapi_save_config_cmd(int sock, int argc, FAR char **argv)
 
   if (!IFF_IS_RUNNING(if_flags))
     {
-      return -1;
+      return -EINVAL;
     }
 
   psk_len = sizeof(psk);
@@ -885,7 +1037,7 @@ static int wapi_save_config_cmd(int sock, int argc, FAR char **argv)
       return ret;
     }
 
-  conf.bssid = ether_ntoa(&ap);
+  conf.bssid = ether_ntoa_r(&ap, bssid);
 
   memset(psk, 0, sizeof(psk));
   ret = wpa_driver_wext_get_key_ext(sock,
@@ -893,7 +1045,7 @@ static int wapi_save_config_cmd(int sock, int argc, FAR char **argv)
                                     &conf.alg,
                                     psk,
                                     &psk_len);
-  if (ret == 0)
+  if (ret >= 0)
     {
       conf.passphrase = psk;
       conf.phraselen = psk_len;
@@ -933,6 +1085,56 @@ static int wapi_save_config_cmd(int sock, int argc, FAR char **argv)
 #endif
 
 /****************************************************************************
+ * Name: wapi_pta_prio_cmd
+ *
+ * Description:
+ *   Manually configure the pta priority.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static int wapi_pta_prio_cmd(int sock, int argc, FAR char **argv)
+{
+  enum wapi_pta_prio_e pta_prio;
+
+  /* Convert input strings to values */
+
+  pta_prio = (enum wapi_pta_prio_e)
+    wapi_str2ndx(argv[1], g_wapi_pta_prio_flags);
+
+  /* Set operating mode */
+
+  return wapi_set_pta_prio(sock, argv[0], pta_prio);
+}
+
+/****************************************************************************
+ * Name: wapi_power_save_cmd
+ *
+ * Description:
+ *   Manually configure the power save status.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static int wapi_power_save_cmd(int sock, int argc, FAR char **argv)
+{
+  bool on = false;
+
+  if (strcmp(argv[1], "on") == 0)
+    {
+      on = true;
+    }
+
+  /* Set power save status */
+
+  return wapi_set_power_save(sock, argv[0], on);
+}
+
+/****************************************************************************
  * Name: wapi_showusage
  *
  * Description:
@@ -950,6 +1152,7 @@ static void wapi_showusage(FAR const char *progname, int exitcode)
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "\t%s show         <ifname>\n", progname);
   fprintf(stderr, "\t%s scan         <ifname>\n", progname);
+  fprintf(stderr, "\t%s pscan        <ifname>\n", progname);
   fprintf(stderr, "\t%s scan_results <ifname>\n", progname);
   fprintf(stderr, "\t%s ip           <ifname> <IP address>\n", progname);
   fprintf(stderr, "\t%s mask         <ifname> <mask>\n", progname);
@@ -957,8 +1160,8 @@ static void wapi_showusage(FAR const char *progname, int exitcode)
                    progname);
   fprintf(stderr, "\t%s essid        <ifname> <essid>      <index/flag>\n",
                    progname);
-  fprintf(stderr, "\t%s psk          <ifname> <passphrase> <index/flag>\n",
-                   progname);
+  fprintf(stderr, "\t%s psk          <ifname> <passphrase> <index/flag> "
+                  "[wpa]\n", progname);
   fprintf(stderr, "\t%s disconnect   <ifname>\n", progname);
   fprintf(stderr, "\t%s mode         <ifname>              <index/mode>\n",
                    progname);
@@ -974,6 +1177,8 @@ static void wapi_showusage(FAR const char *progname, int exitcode)
   fprintf(stderr, "\t%s reconnect    <ifname>\n", progname);
   fprintf(stderr, "\t%s save_config  <ifname>\n", progname);
 #endif
+  fprintf(stderr, "\t%s pta_prio     <ifname>  <index/flag>\n", progname);
+  fprintf(stderr, "\t%s power_save   <ifname>  <on|off>\n", progname);
   fprintf(stderr, "\t%s help\n", progname);
 
   fprintf(stderr, "\nFrequency Flags:\n");
@@ -994,6 +1199,12 @@ static void wapi_showusage(FAR const char *progname, int exitcode)
       fprintf(stderr, "\t[%d] %s\n", i, g_wapi_alg_flags[i]);
     }
 
+  fprintf(stderr, "\nPassphrase WPA version:\n");
+  for (i = 0; g_wapi_wpa_ver_flags[i]; i++)
+    {
+      fprintf(stderr, "\t[%d] %s\n", i, g_wapi_wpa_ver_flags[i]);
+    }
+
   fprintf(stderr, "\nOperating Modes:\n");
   for (i = 0; g_wapi_modes[i]; i++)
     {
@@ -1010,6 +1221,12 @@ static void wapi_showusage(FAR const char *progname, int exitcode)
   for (i = 0; g_wapi_txpower_flags[i]; i++)
     {
       fprintf(stderr, "\t[%d] %s\n", i, g_wapi_txpower_flags[i]);
+    }
+
+  fprintf(stderr, "\npta prio Flags:\n");
+  for (i = 0; g_wapi_pta_prio_flags[i]; i++)
+    {
+      fprintf(stderr, "\t[%d] %s\n", i, g_wapi_pta_prio_flags[i]);
     }
 
   exit(exitcode);
@@ -1040,7 +1257,7 @@ int main(int argc, FAR char *argv[])
   /* Find the command in the g_wapi_command[] list */
 
   wapicmd = NULL;
-  for (i = 0; i < NCOMMANDS; i++)
+  for (i = 0; i < nitems(g_wapi_commands); i++)
     {
       FAR const struct wapi_command_s *cmd = &g_wapi_commands[i];
       if (strcmp(cmdname, cmd->name) == 0)

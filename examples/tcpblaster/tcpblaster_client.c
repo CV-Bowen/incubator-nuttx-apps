@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/tcpblaster/tcpblaster_client.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -148,7 +150,7 @@ void tcpblaster_client(void)
 
       memset(fds, 0, 1 * sizeof(struct pollfd));
       fds[0].fd     = sockfd;
-      fds[0].events = POLLOUT | POLLHUP;
+      fds[0].events = POLLOUT;
 
       /* Wait until we can send data or until the connection is lost */
 

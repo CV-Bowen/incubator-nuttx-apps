@@ -1,6 +1,8 @@
 ############################################################################
 # apps/examples/apds9960/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -20,14 +22,14 @@
 
 include $(APPDIR)/Make.defs
 
-# Hello, World! built-in application info
+# APDS9960 built-in application info
 
 PROGNAME = $(CONFIG_EXAMPLES_APDS9960_PROGNAME)
 PRIORITY = $(CONFIG_EXAMPLES_APDS9960_PRIORITY)
 STACKSIZE = $(CONFIG_EXAMPLES_APDS9960_STACKSIZE)
 MODULE = $(CONFIG_EXAMPLES_APDS9960)
 
-# Hello, World! Example
+# APDS9960 Example
 
 MAINSRC = apds9960_main.c
 

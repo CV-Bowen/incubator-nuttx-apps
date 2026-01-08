@@ -1,6 +1,8 @@
 ############################################################################
 # apps/examples/foc/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -48,6 +50,18 @@ endif
 
 ifeq ($(CONFIG_INDUSTRY_FOC_FLOAT),y)
   CSRCS += foc_float_thr.c foc_motor_f32.c
+endif
+
+# NxScope support
+
+ifeq ($(CONFIG_EXAMPLES_FOC_NXSCOPE),y)
+  CSRCS += foc_nxscope.c
+endif
+
+# perf support
+
+ifeq ($(CONFIG_EXAMPLES_FOC_PERF),y)
+CSRCS += foc_perf.c
 endif
 
 include $(APPDIR)/Application.mk

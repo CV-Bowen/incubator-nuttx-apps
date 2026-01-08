@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/netlib/netlib_parseurl.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -59,9 +61,18 @@ int netlib_parseurl(FAR const char *str, FAR struct url_s *url)
 {
   FAR const char *src = str;
   FAR char *dest;
-  int bytesleft;
+  size_t bytesleft;
   int ret = OK;
   size_t pathlen;
+
+  /* Each fields should have at least 1 byte to store
+   * the terminating NUL.
+   */
+
+  if (url->schemelen == 0 || url->hostlen == 0 || url->pathlen == 0)
+    {
+      return -EINVAL;
+    }
 
   /* extract the protocol field, a set of a-z letters */
 
@@ -173,6 +184,11 @@ int netlib_parseurl(FAR const char *str, FAR struct url_s *url)
     {
       src++;
     }
+
+  /* Note: the current implementation does not distinguish
+   * an empty path and "/". While it's fine for HTTP, maybe it's
+   * cleaner to move the HTTP-specific normalization to the caller.
+   */
 
   *dest++ = '/';
   bytesleft--;

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/nxdemo/nxdemo_bkgd.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,8 +32,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <semaphore.h>
+#include <sys/param.h>
 #include <errno.h>
 #include <debug.h>
+#include <unistd.h>
 
 #include <nuttx/nx/nx.h>
 #include <nuttx/nx/nxglib.h>
@@ -64,13 +68,6 @@
 #  define RENDERER nxf_convert_32bpp
 #else
 #  error "Unsupported CONFIG_EXAMPLES_NXDEMO_BPP"
-#endif
-
-#ifndef MIN
-#  define MIN(a,b) ((a) < (b) ? (a) : (b))
-#endif
-#ifndef MAX
-#  define MAX(a,b) ((a) > (b) ? (a) : (b))
 #endif
 
 /****************************************************************************
@@ -476,7 +473,7 @@ static void nxdemo_demo_4(NXWINDOW hwnd)
   origin.x   = 0;
   origin.y   = 0;
 
-  src[0] = (FAR const void *)g_battery;
+  src[0] = g_battery;
 
   ret = nx_bitmap((NXWINDOW)hwnd,
                   &rect,

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/include/netutils/telnetc.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -586,7 +588,8 @@ void telnet_begin_compress2(struct telnet_s *telnet);
  *
  ****************************************************************************/
 
-int telnet_printf(struct telnet_s *telnet, const char *fmt, ...);
+int telnet_printf(struct telnet_s *telnet, const char *fmt, ...)
+    printf_like(2, 3);
 
 /****************************************************************************
  * Name: telnet_vprintf
@@ -598,7 +601,8 @@ int telnet_printf(struct telnet_s *telnet, const char *fmt, ...);
  *
  ****************************************************************************/
 
-int telnet_vprintf(struct telnet_s *telnet, const char *fmt, va_list va);
+int telnet_vprintf(struct telnet_s *telnet, const char *fmt, va_list va)
+    printf_like(2, 0);
 
 /****************************************************************************
  * Name: telnet_raw_printf
@@ -619,7 +623,8 @@ int telnet_vprintf(struct telnet_s *telnet, const char *fmt, va_list va);
  *
  ****************************************************************************/
 
-int telnet_raw_printf(struct telnet_s *telnet, const char *fmt, ...);
+int telnet_raw_printf(struct telnet_s *telnet, const char *fmt, ...)
+    printf_like(2, 3);
 
 /****************************************************************************
  * Name: telnet_raw_vprintf
@@ -631,7 +636,8 @@ int telnet_raw_printf(struct telnet_s *telnet, const char *fmt, ...);
  *
  ****************************************************************************/
 
-int telnet_raw_vprintf(struct telnet_s *telnet, const char *fmt, va_list va);
+int telnet_raw_vprintf(struct telnet_s *telnet, const char *fmt, va_list va)
+    printf_like(2, 0);
 
 /****************************************************************************
  * Name: telnet_begin_newenviron
@@ -701,7 +707,7 @@ void telnet_newenviron_value(struct telnet_s *telnet, unsigned char type,
  *
  ****************************************************************************/
 
-void telnet_ttype_send(struct telnet_s * telnet);
+void telnet_ttype_send(struct telnet_s *telnet);
 
 /****************************************************************************
  * Name: telnet_ttype_is
@@ -739,7 +745,7 @@ void telnet_ttype_send(struct telnet_s * telnet);
  *
  ****************************************************************************/
 
-void telnet_ttype_is(struct telnet_s * telnet, const char *ttype);
+void telnet_ttype_is(struct telnet_s *telnet, const char *ttype);
 
 /****************************************************************************
  * Name: telnet_send_zmp
@@ -754,8 +760,8 @@ void telnet_ttype_is(struct telnet_s * telnet, const char *ttype);
  *
  ****************************************************************************/
 
-void telnet_send_zmp(struct telnet_s * telnet, size_t argc,
-                              const char **argv);
+void telnet_send_zmp(struct telnet_s *telnet, size_t argc,
+                     const char **argv);
 
 /****************************************************************************
  * Name: telnet_send_zmpv
@@ -771,7 +777,7 @@ void telnet_send_zmp(struct telnet_s * telnet, size_t argc,
  *
  ****************************************************************************/
 
-void telnet_send_zmpv(struct telnet_s * telnet, ...);
+void telnet_send_zmpv(struct telnet_s *telnet, ...);
 
 /****************************************************************************
  * Name: telnet_send_vzmpv
@@ -783,7 +789,7 @@ void telnet_send_zmpv(struct telnet_s * telnet, ...);
  *
  ****************************************************************************/
 
-void telnet_send_vzmpv(struct telnet_s * telnet, va_list va);
+void telnet_send_vzmpv(struct telnet_s *telnet, va_list va);
 
 /****************************************************************************
  * Name: telnet_begin_zmp
@@ -797,7 +803,7 @@ void telnet_send_vzmpv(struct telnet_s * telnet, va_list va);
  *
  ****************************************************************************/
 
-void telnet_begin_zmp(struct telnet_s * telnet, const char *cmd);
+void telnet_begin_zmp(struct telnet_s *telnet, const char *cmd);
 
 /****************************************************************************
  * Name: telnet_zmp_arg
@@ -811,7 +817,7 @@ void telnet_begin_zmp(struct telnet_s * telnet, const char *cmd);
  *
  ****************************************************************************/
 
-void telnet_zmp_arg(struct telnet_s * telnet, const char *arg);
+void telnet_zmp_arg(struct telnet_s *telnet, const char *arg);
 
 /****************************************************************************
  * Name: telnet_finish_zmp

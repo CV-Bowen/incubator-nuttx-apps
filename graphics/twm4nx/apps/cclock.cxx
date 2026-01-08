@@ -1,6 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/graphics/twm4nx/src/cnxterm.cxx
 //
+// SPDX-License-Identifier: Apache-2.0
+//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -26,12 +28,12 @@
 
 #include <ctime>
 #include <cstring>
-#include <csched>
 #include <cassert>
-#include <cunistd>
 
 #include <semaphore.h>
 #include <debug.h>
+#include <sched.h>
+#include <unistd.h>
 
 #include <nuttx/semaphore.h>
 
@@ -297,7 +299,6 @@ bool CClock::run(void)
   // start the new Clock task
 
   sem_init(&GClockVars.waitSem, 0, 0);
-  sem_setprotocol(&GClockVars.waitSem, SEM_PRIO_NONE);
 
   GClockVars.that    = this;
   GClockVars.success = false;
@@ -361,7 +362,7 @@ void CClock::stop(void)
 
       // Then delete the NSH task, possibly stranding resources
 
-      std::task_delete(pid);
+      task_delete(pid);
     }
 }
 

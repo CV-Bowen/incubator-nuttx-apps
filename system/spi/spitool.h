@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/system/spi/spitool.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -88,7 +90,11 @@
  * then some.
  */
 
-#define MAX_ARGUMENTS 12
+#ifdef CONFIG_NSH_MAXARGUMENTS
+#define MAX_ARGUMENTS CONFIG_NSH_MAXARGUMENTS
+#else
+#define MAX_ARGUMENTS 16
+#endif
 
 /* Maximum size of one command line */
 
@@ -115,7 +121,7 @@
 
 /* Output is via printf but can be changed using this macro */
 
-# define spi_output         printf
+#  define spi_output         printf
 
 /****************************************************************************
  * Public Types
@@ -134,12 +140,13 @@ struct spitool_s
   bool command;        /* [-c 0|1] Send as command or data?        */
   useconds_t udelay;   /* [-u udelay] Delay in uS after transfer   */
   uint8_t mode;        /* [-m mode] Mode to use for transfer       */
+  uint8_t trans_count; /* [-r trans count] No of trans to exchange */
 
   /* Output streams */
 
 #ifdef CONFIG_SPITOOL_OUTDEV
-  int    ss_outfd;     /* Output file descriptor */
-  FILE  *ss_outstream; /* Output stream */
+  int   ss_outfd;     /* Output file descriptor */
+  FILE *ss_outstream; /* Output stream */
 #endif
 };
 
@@ -176,7 +183,8 @@ extern const char g_spixfrerror[];
 ssize_t spitool_exchange(FAR struct spitool_s *spitool,
                          FAR const void *outbuffer, size_t noutbytes,
                          FAR void *inbuffer, size_t ninbytes);
-int spitool_printf(FAR struct spitool_s *spitool, const char *fmt, ...);
+int spitool_printf(FAR struct spitool_s *spitool,
+                   FAR const char *fmt, ...) printf_like(2, 3);
 void spitool_flush(FAR struct spitool_s *spitool);
 
 /* Command handlers */

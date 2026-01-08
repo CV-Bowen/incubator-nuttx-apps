@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/system/system/system.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,6 +33,8 @@
 #include <assert.h>
 #include <debug.h>
 #include <errno.h>
+#include <execinfo.h>
+#include <syslog.h>
 
 #include "nshlib/nshlib.h"
 
@@ -68,6 +72,11 @@ int system(FAR const char *cmd)
   int rc;
   int ret;
 
+#ifdef CONFIG_SYSTEM_SYSTEM_DUMPINFO
+  syslog(LOG_INFO, "SYSTEM cmd=%s\n", cmd);
+  dump_stack();
+#endif
+
   /* REVISIT: If cmd is NULL, then system() should return a non-zero value to
    * indicate if the command processor is available or zero if it is not.
    */
@@ -91,8 +100,8 @@ int system(FAR const char *cmd)
       goto errout_with_attrs;
     }
 
-  errcode = task_spawnattr_setstacksize(&attr,
-                                        CONFIG_SYSTEM_SYSTEM_STACKSIZE);
+  errcode = posix_spawnattr_setstacksize(&attr,
+                                         CONFIG_SYSTEM_SYSTEM_STACKSIZE);
   if (errcode != 0)
     {
       goto errout_with_attrs;
@@ -134,11 +143,9 @@ int system(FAR const char *cmd)
 
 #ifdef CONFIG_SYSTEM_SYSTEM_SHPATH
   argv[0] = CONFIG_SYSTEM_SYSTEM_SHPATH;
-  errcode = posix_spawn(&pid, argv[0],  NULL, &attr,
-                        argv, (FAR char * const *)NULL);
+  errcode = posix_spawn(&pid, argv[0],  NULL, &attr, argv, NULL);
 #else
-  pid = task_spawn("system", nsh_system, NULL, &attr,
-                   argv + 1, (FAR char * const *)NULL);
+  pid = task_spawn("system", nsh_system, NULL, &attr, argv + 1, NULL);
   if (pid < 0)
     {
       errcode = -pid;

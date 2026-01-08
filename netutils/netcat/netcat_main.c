@@ -1,6 +1,7 @@
 /****************************************************************************
  * apps/netutils/netcat/netcat_main.c
- * netcat networking application
+ *
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -41,7 +42,7 @@
  ****************************************************************************/
 
 #ifndef NETCAT_PORT
-# define NETCAT_PORT 31337
+#  define NETCAT_PORT 31337
 #endif
 
 /****************************************************************************
@@ -175,7 +176,8 @@ int netcat_server(int argc, char * argv[])
     }
 
   addrlen = sizeof(struct sockaddr_in);
-  if ((conn = accept(id, (struct sockaddr *)&client, &addrlen)) != -1)
+  if ((conn = accept4(id, (struct sockaddr *)&client, &addrlen,
+                      SOCK_CLOEXEC)) != -1)
     {
       result = do_io(conn, outfd,
                      preallocated_iobuf, CONFIG_NETUTILS_NETCAT_BUFSIZE);
@@ -269,7 +271,7 @@ int netcat_client(int argc, char * argv[])
       goto out;
     }
 
-  if (connect(id, (struct sockaddr *) &server, sizeof(server)) < 0)
+  if (connect(id, (struct sockaddr *)&server, sizeof(server)) < 0)
     {
       perror("error: net: Failed to connect");
       result = 4;

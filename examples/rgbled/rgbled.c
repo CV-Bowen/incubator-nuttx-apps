@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/rgbled/rgbled.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -23,10 +25,12 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -63,37 +67,37 @@ int main(int argc, FAR char *argv[])
       return -1;
     }
 
-  while(1)
-  {
-    red   += sred;
-    green += sgreen;
-    blue  += sblue;
+  while (1)
+    {
+      red   += sred;
+      green += sgreen;
+      blue  += sblue;
 
-    if (green == 255)
-      {
-        sred   = 0;
-        sgreen = -1;
-        sblue  = 1;
-      }
+      if (green == 255)
+        {
+          sred   = 0;
+          sgreen = -1;
+          sblue  = 1;
+        }
 
-    if (blue == 255)
-      {
-        sred   = 1;
-        sgreen = 0;
-        sblue  = -1;
-      }
+      if (blue == 255)
+        {
+          sred   = 1;
+          sgreen = 0;
+          sblue  = -1;
+        }
 
-    if (red == 255)
-      {
-        sred   = -1;
-        sblue  = 0;
-        sgreen = 1;
-      }
+      if (red == 255)
+        {
+          sred   = -1;
+          sblue  = 0;
+          sgreen = 1;
+        }
 
-    sprintf(buffer, "#%02X%02X%02X", red, green, blue);
-    write(fd, buffer, 8);
-    usleep(5000);
-  }
+      snprintf(buffer, sizeof(buffer), "#%02X%02X%02X", red, green, blue);
+      write(fd, buffer, 8);
+      usleep(5000);
+    }
 
   return 0;
 }

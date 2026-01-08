@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/fsutils/inifile/inifile.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -486,7 +488,7 @@ INIHANDLE inifile_initialize(FAR const char *inifile_name)
   if (!priv)
     {
       inidbg("ERROR: Failed to allocate state structure\n");
-      return (INIHANDLE)NULL;
+      return NULL;
     }
 
   /* Open the specified INI file for reading */
@@ -504,7 +506,7 @@ INIHANDLE inifile_initialize(FAR const char *inifile_name)
     {
       inidbg("ERROR: Could not open \"%s\"\n", inifile_name);
       free(priv);
-      return (INIHANDLE)NULL;
+      return NULL;
     }
 }
 
@@ -603,7 +605,7 @@ long inifile_read_integer(INIHANDLE handle,
 
   /* Assume failure to find the requested value */
 
-  iniinfo("section=\"%s\" variable=\"%s\" defvalue=%d\n",
+  iniinfo("section=\"%s\" variable=\"%s\" defvalue=%ld\n",
           section, variable, defvalue);
 
   /* Get the value as a string first */
@@ -624,7 +626,7 @@ long inifile_read_integer(INIHANDLE handle,
 
   /* Return the value that we found. */
 
-  iniinfo("Returning %d\n", ret);
+  iniinfo("Returning %ld\n", ret);
   return ret;
 }
 

@@ -1,6 +1,8 @@
 ############################################################################
 # apps/mlearning/cmsis/libcmsisdsp/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -31,8 +33,8 @@ CFLAGS += -D__FPU_PRESENT=1U
 CXXFLAGS += -D__FPU_PRESENT=1U
 endif
 
-CFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" $(APPDIR)/mlearning/cmsis/CMSIS_5/CMSIS/DSP/PrivateInclude/}
-CXXFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" $(APPDIR)/mlearning/cmsis/CMSIS_5/CMSIS/DSP/PrivateInclude/}
+CFLAGS += ${INCDIR_PREFIX}$(APPDIR)/mlearning/cmsis/CMSIS_5/CMSIS/DSP/PrivateInclude/
+CXXFLAGS += ${INCDIR_PREFIX}$(APPDIR)/mlearning/cmsis/CMSIS_5/CMSIS/DSP/PrivateInclude/
 
 CMSIS5_DSP := ../CMSIS_5/CMSIS/DSP/Source
 CSRCS += SVMFunctions.c

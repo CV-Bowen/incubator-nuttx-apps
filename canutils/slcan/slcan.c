@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/canutils/slcan/slcan.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -44,10 +46,8 @@
 #include <sys/socket.h>
 #include <syslog.h>
 #include <sys/uio.h>
-#include <net/if.h>
 #include <termios.h>
 #include <nuttx/can.h>
-#include <netpacket/can.h>
 
 #include "slcan.h"
 
@@ -137,8 +137,7 @@ static int caninit(char *candev, int *s, struct sockaddr_can *addr,
       syslog(LOG_ERR, "Error opening CAN socket\n");
       return -1;
     }
-  strncpy(ifr.ifr_name, candev, 4);
-  ifr.ifr_name[4] = '\0';
+  strlcpy(ifr.ifr_name, candev, IFNAMSIZ);
   ifr.ifr_ifindex = if_nametoindex(ifr.ifr_name);
   if (!ifr.ifr_ifindex)
     {
@@ -189,7 +188,11 @@ int main(int argc, char *argv[])
 
   /* CAN */
 
-  int s, nbytes, i, ret, reccount;
+  int s;
+  int nbytes;
+  int i;
+  int ret;
+  int reccount = 0;
   struct sockaddr_can addr;
   struct canfd_frame frame;
   struct msghdr msg;
@@ -197,7 +200,8 @@ int main(int argc, char *argv[])
   fd_set rdfs;
   char ctrlmsg[CMSG_SPACE(sizeof(struct timeval) +
                           3 * sizeof(struct timespec) + sizeof(int))];
-  char sbuf[40], *sbp;
+  char sbuf[40];
+  char *sbp;
 
   if (argc != 3)
     {
@@ -210,7 +214,7 @@ int main(int argc, char *argv[])
   char *candev = argv[1];
 
   debug_print("Starting slcan on NuttX\n");
-  fd = open(chrdev, O_RDWR | O_BINARY);
+  fd = open(chrdev, O_RDWR);
   if (fd < 0)
     {
       syslog(LOG_ERR, "Failed to open serial channel %s\n", chrdev);
@@ -258,26 +262,30 @@ int main(int argc, char *argv[])
               if (nbytes == CAN_MTU)
                 {
                   reccount++;
-                  debug_print("R%d, Id:0x%lX\n", reccount, frame.can_id);
+                  debug_print("R%d, Id:0x%" PRIx32 "\n",
+                              reccount, frame.can_id);
                   if (frame.can_id & CAN_EFF_FLAG)
                     {
                       /* 29 bit address */
 
                       frame.can_id = frame.can_id & ~CAN_EFF_FLAG;
-                      sprintf(sbuf, "T%08lX%d", frame.can_id, frame.len);
+                      snprintf(sbuf, sizeof(sbuf), "T%08" PRIx32 "%d",
+                               frame.can_id, frame.len);
                       sbp = &sbuf[10];
                     }
                   else
                     {
                       /* 11 bit address */
 
-                      sprintf(sbuf, "t%03lX%d", frame.can_id, frame.len);
+                      snprintf(sbuf, sizeof(sbuf), "t%03" PRIx32 "%d",
+                               frame.can_id, frame.len);
                       sbp = &sbuf[5];
                     }
 
                   for (i = 0; i < frame.len; i++)
                     {
-                      sprintf(sbp, "%02X", frame.data[i]);
+                      snprintf(sbp, sizeof(sbuf) - (sbp - sbuf),
+                               "%02X", frame.data[i]);
                       sbp += 2;
                     }
 
@@ -308,9 +316,22 @@ int main(int argc, char *argv[])
                         {
                           /* open CAN interface */
 
-                          mode = 1;
-                          debug_print("Open interface\n");
-                          ok_return(fd);
+                          struct ifreq ifr;
+
+                          strlcpy(ifr.ifr_name, argv[1], IFNAMSIZ);
+
+                          ifr.ifr_flags = IFF_UP;
+                          if (ioctl(s, SIOCSIFFLAGS, &ifr) < 0)
+                            {
+                              syslog(LOG_ERR, "Open interface failed\n");
+                              fail_return(fd);
+                            }
+                          else
+                            {
+                              mode = 1;
+                              debug_print("Open interface\n");
+                              ok_return(fd);
+                            }
                         }
                       else if (buf[0] == 'S')
                         {
@@ -353,11 +374,8 @@ int main(int argc, char *argv[])
 
                           /* set the device name */
 
-                          strncpy(ifr.ifr_name, argv[1], IFNAMSIZ - 1);
-                          ifr.ifr_name[IFNAMSIZ - 1] = '\0';
-
-                          ifr.ifr_ifru.ifru_can_data.arbi_bitrate =
-                            canspeed / 1000; /* Convert bit/s to kbit/s */
+                          strlcpy(ifr.ifr_name, argv[1], IFNAMSIZ);
+                          ifr.ifr_ifru.ifru_can_data.arbi_bitrate = canspeed;
                           ifr.ifr_ifru.ifru_can_data.arbi_samplep = 80;
 
                           if (ioctl(s, SIOCSCANBITRATE, &ifr) < 0)
@@ -387,16 +405,30 @@ int main(int argc, char *argv[])
                         {
                           /* close interface */
 
-                          mode = 0;
-                          debug_print("Close interface\n");
-                          ok_return(fd);
+                          struct ifreq ifr;
+
+                          strlcpy(ifr.ifr_name, argv[1], IFNAMSIZ);
+
+                          ifr.ifr_flags = 0;
+                          if (ioctl(s, SIOCSIFFLAGS, &ifr) < 0)
+                            {
+                              syslog(LOG_ERR, "Close interface failed\n");
+                              fail_return(fd);
+                            }
+                          else
+                            {
+                              mode = 0;
+                              debug_print("Close interface\n");
+                              ok_return(fd);
+                            }
                         }
                       else if (buf[0] == 'T')
                         {
                           /* Transmit an extended 29 bit CAN frame */
 
                           char tbuf[9];
-                          int idval, val;
+                          int idval;
+                          int val;
 
                           /* get 29bit CAN ID */
 
@@ -441,7 +473,8 @@ int main(int argc, char *argv[])
                           /* Transmit an 11 bit CAN frame */
 
                           char tbuf[9];
-                          int idval, val;
+                          int idval;
+                          int val;
 
                           /* get 11bit CAN ID */
 

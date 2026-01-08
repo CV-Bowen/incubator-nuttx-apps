@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/netutils/netlib/netlib_prefix2ipv6netmask.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -69,7 +71,7 @@ void netlib_prefix2ipv6netmask(uint8_t preflen, FAR struct in6_addr *netmask)
    *              1..6 7..2 3..8 9..4  5..0 1..6 7..2 3..8
    */
 
-  for (i = 0; i < 7; i++)
+  for (i = 0; i < 8; i++)
     {
       /* bit = {0, 16, 32, 48, 64, 80, 96, 112} */
 
@@ -88,12 +90,12 @@ void netlib_prefix2ipv6netmask(uint8_t preflen, FAR struct in6_addr *netmask)
           else
             {
               /* Eg. preflen = 38, bit = {32}
-               *     bit - preflen = 6
+               *     preflen - bit = 6
                *     make = 0xffff << (16-6)
                *          = 0xfc00
                */
 
-              mask[i]  = 0xffff << (16 - (bit - preflen));
+              mask[i]  = htons(0xffff << (16 - (preflen - bit)));
             }
         }
       else

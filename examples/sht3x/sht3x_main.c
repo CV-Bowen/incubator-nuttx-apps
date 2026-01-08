@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/sht3x/sht3x_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -23,12 +25,13 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <stdio.h>
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <unistd.h>
 
 #include <nuttx/sensors/ioctl.h>
 #include <nuttx/sensors/sht3x.h>

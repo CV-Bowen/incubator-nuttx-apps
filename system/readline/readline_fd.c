@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/system/readline/readline_fd.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -28,12 +30,13 @@
 #include <unistd.h>
 #include <errno.h>
 #include <assert.h>
+#include <termios.h>
 
 #include "system/readline.h"
 #include "readline.h"
 
 /****************************************************************************
- * Private Type Declarations
+ * Private Types
  ****************************************************************************/
 
 struct readline_s
@@ -117,6 +120,13 @@ static void readline_putc(FAR struct rl_common_s *vtbl, int ch)
 
   DEBUGASSERT(priv);
 
+  /* If outfd is a invalid fd, return directly. */
+
+  if (priv->outfd < 0)
+    {
+      return;
+    }
+
   /* Loop until we successfully write a character (or until an unexpected
    * error occurs).
    */
@@ -148,6 +158,13 @@ static void readline_write(FAR struct rl_common_s *vtbl,
 {
   FAR struct readline_s *priv = (FAR struct readline_s *)vtbl;
   DEBUGASSERT(priv && buffer && buflen > 0);
+
+  /* If outfd is a invalid fd, return directly. */
+
+  if (priv->outfd < 0)
+    {
+      return;
+    }
 
   write(priv->outfd, buffer, buflen);
 }
@@ -188,7 +205,22 @@ static void readline_write(FAR struct rl_common_s *vtbl,
 
 ssize_t readline_fd(FAR char *buf, int buflen, int infd, int outfd)
 {
+  UNUSED(outfd);
+
   struct readline_s vtbl;
+  struct termios cfg;
+  ssize_t ret;
+
+  if (isatty(infd))
+    {
+      tcgetattr(infd, &cfg);
+      if (cfg.c_lflag & ICANON)
+        {
+          cfg.c_lflag &= ~ICANON;
+          tcsetattr(infd, TCSANOW, &cfg);
+          cfg.c_lflag |= ICANON;
+        }
+    }
 
   /* Set up the vtbl structure */
 
@@ -203,5 +235,12 @@ ssize_t readline_fd(FAR char *buf, int buflen, int infd, int outfd)
 
   /* The let the common readline logic do the work */
 
-  return readline_common(&vtbl.vtbl, buf, buflen);
+  ret = readline_common(&vtbl.vtbl, buf, buflen);
+
+  if (isatty(infd) && (cfg.c_lflag & ICANON))
+    {
+      tcsetattr(infd, TCSANOW, &cfg);
+    }
+
+  return ret;
 }

@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/examples/hdc1008_demo/hdc1008_main.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,6 +33,7 @@
 
 #include <fcntl.h>
 #include <stdio.h>
+#include <unistd.h>
 
 /****************************************************************************
  * Pre-processor Definitions

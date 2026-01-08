@@ -1,6 +1,8 @@
 /****************************************************************************
  * apps/graphics/pdcurses/curspriv.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -61,10 +63,10 @@
 /* Internal macros for attributes */
 
 #ifndef max
-# define max(a,b) (((a) > (b)) ? (a) : (b))
+#  define max(a,b) (((a) > (b)) ? (a) : (b))
 #endif
 #ifndef min
-# define min(a,b) (((a) < (b)) ? (a) : (b))
+#  define min(a,b) (((a) < (b)) ? (a) : (b))
 #endif
 
 #define DIVROUND(num, divisor) ((num) + ((divisor) >> 1)) / (divisor)
